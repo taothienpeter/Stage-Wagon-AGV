@@ -1,32 +1,48 @@
 #include "AgvFrame.h"
-SwervePin pinsFrontLeft = {
+#include "FrameEnum.h"
+SwervePin pins[2] = {{
     .stepDir = MOTOR_1_PIN_DIR,
     .stepPul = MOTOR_1_PIN_PUL,
-    // .stepEn = MOTOR_1_PIN_EN,
 
     .encStepA = ENC_STEPPER_1A,
     .encStepB = ENC_STEPPER_1B,
     .encHome = ENC_STEPPER_1HOME,
 
+    .MotorNum = 0,
+
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial,
-    // .isCW = {0x00}
-};
-Swerve_controls swerve(pinsFrontLeft);
+}, {
+    .stepDir = MOTOR_2_PIN_DIR,
+    .stepPul = MOTOR_2_PIN_PUL,
 
-enum Phase { START, ARM, READY };
-Phase State = START; // phases for odrive init
+    .encStepA = ENC_STEPPER_2A,
+    .encStepB = ENC_STEPPER_2B,
+    .encHome = ENC_STEPPER_2HOME,
+
+    .MotorNum = 1,
+
+    .SerialOdr = &Serial2,
+    .SerialMonitor = &Serial,
+}};
+wheelPositions wheelPos[2] = {
+    wheelPositions(WHEEL_POSITIONS_W/2, WHEEL_POSITIONS_B/2),
+    wheelPositions(-WHEEL_POSITIONS_W/2, -WHEEL_POSITIONS_B/2)
+};
+Swerve_module_kinematics *swerve[2] = {new Swerve_module_kinematics(pins[0], {0x00}, wheelPos[0]), 
+                                       new Swerve_module_kinematics(pins[1], {0x00}, wheelPos[1])};
+ctrlValues ref; // only use posTurn and velDrive
 
 void setup(){
-    Serial.begin(9600);
-    // swerve.initSwerve();
-    // Serial.println("ODrive Booting...");
+    // Initialize Serial first
+    Serial.begin(MONITOR_BAUDRATE);
+    delay(500);
     
-    // pinsFrontLeft.SerialOdr->begin(ODRIVE_BAUD, SERIAL_8N1, ODRIVE_RX, ODRIVE_TX);
-    // Serial2.begin(ODRIVE_BAUD, SERIAL_8N1, ODRIVE_RX, ODRIVE_TX);
-    // delay(500); 
-    // Serial2.print("sc\n"); // Clear errors
-    // init();
+    // Initialize encoders sequentially with delays to avoid PCNT ISR conflicts
+    swerve[0]->initSwerveModule();
+    delay(100);
+    swerve[1]->initSwerveModule();
+    delay(100);
 }
 void loop(){
     if (Serial.available()) {
@@ -34,69 +50,32 @@ void loop(){
       // data.trim();
       int inter = data.substring(1).toInt();
       Serial.println("Received from laptop: "+data);
-    // if (data[0] == 'm') swerve.move(((inter*MOTOR_MICROSTEPS)/360)+111);
-    // if (data[0] == 'p') stepper->moveTo(((inter*MOTOR_MICROSTEPS)/360)+111);
-    // if (data[0] == 's') stepper->setSpeedInUs(inter);
-    // if (data[0] == 'a') stepper->setAcceleration(inter);
-    // if (data[0] == 'd') Serial.println("Position: "+ (String)stepper->getCurrentPosition() +"\nSpeed: " + (String)stepper->getSpeedInUs()+ "\nAcceleration: " + (String)stepper->getAcceleration());
-    // if (data[0] == 'h') homingSeq();
-    // } 
-    // if (stepper && stepper->isRunning()) {
-    //   Serial.println("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getAngle());
-    //   // if(digitalRead(14)){Serial.println("Not homing");} 
-    //   // else {updateH1();};
-    // } else {
-    //   Serial.print("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getTicks());
-    //   Serial.println(" All moves completed!");
-    //   while (!Serial.available()) {
-    //     // Serial.println("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getTicks());
-    //     // Serial.println("Stepper idle");
-    //     // delay(10);
-    //   }
-    }
-
-    // BLDC
-    if (State != READY) {
-        switch(State) {
-            case START:{
-                Serial.println("Calibrating MOTOR ...");
-                Serial2.print("w axis0.requested_state 4\n");
-                Serial2.print("w axis1.requested_state 4\n");
-                // Serial2.print("r axis0.error\n");
-                State = ARM;
+      
+        switch(data[0]){
+            case 'n':
+                ref.position = 1;
+                ref.angle = 0;
                 break;
-            }
-            case ARM:{
-                Serial.println("Calibrating ENCODER ...");
-                Serial2.print("w axis0.requested_state 7\n");
-                Serial2.print("w axis1.requested_state 7\n");
-                State = READY;
+            case 'w':
+                ref.position = 1;
+                ref.angle = -90;
                 break;
-            }    
-            case READY:{
-                delay(10000);
-                Serial2.print("w axis0.controller.input_pos 0\n"); // Zero position target
-                Serial2.print("w axis1.controller.input_pos 0\n");
-                Serial2.print("w axis0.requested_state 8\n"); // Arm
-                Serial2.print("w axis1.requested_state 8\n");
-                Serial.println("ARMED! Motor is holding.");
-                Serial.println("Type your 'p' command to move.");
+            case 's':
+                ref.position = -1;
+                ref.angle = 0;
                 break;
-            }
+            case 'e':
+                ref.position = 1;
+                ref.angle = 90;
+                break;
+            case 'r':
+                ref.position = 0;
+                ref.angle = 0;
+                swerve[0]->resetVars();
+                swerve[0]->resetVars();
         }
-    }
-
-
-    // 2. Simple Two-Way Serial Relay
-    if (Serial.available()) {
-        String msg = Serial.readStringUntil('\n');
-        msg.trim();
-        if (msg.length() > 0) {
-            Serial2.print(msg + "\n");
+        for (short i=0; i<2; i++){
+            swerve[i]->driveSwerve(&ref);
         }
-    }
-    if (Serial2.available()) {
-        Serial2.print("r axis0.error\n");
-        Serial.print("ODrive: " + Serial2.readString());
     }
 }

@@ -17,7 +17,7 @@ void loop() {
                 Serial2.print("w axis0.requested_state 4\n");
                 Serial2.print("w axis1.requested_state 4\n");
                 Serial2.print("r axis0.error\n");
-                delay(5000);
+                delay(3000);
                 State = ARM;
                 break;
             }
@@ -29,7 +29,7 @@ void loop() {
                 break;
             }    
             case READY:{
-                delay(10000);
+                delay(8000);
                 Serial2.print("w axis0.controller.input_pos 0\n"); // Zero position target
                 Serial2.print("w axis1.controller.input_pos 0\n");
                 Serial2.print("w axis0.requested_state 8\n"); // Arm

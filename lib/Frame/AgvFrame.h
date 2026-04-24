@@ -2,6 +2,8 @@
 #include "FastAccelStepper.h"
 #include "Ctrl_config.h"
 #include "Arduino.h"
+#include "FrameEnum.h"
+// #include "OdriveUART.h"
 // #define enablePinStepper 2
 #define SERIAL_DEBUG
 #define DELTA_T PROCESS_DELTA_T
@@ -9,82 +11,17 @@
 ///             first num is type of error: 1 for ERROR, 2 for WARING, 3 for INFO
 ///             second device's code:       1 for Encoders, 2 for Steppers, 3 for Home sens, 4 for BLDCs, 5 for UWBs, 6 for IMU, 7 for Battery
 ///             third device's number   
-enum agvEr{
-//     AGV_OK = 0x00,
-    AGV_ERROR_NO_SERIALMONITOR_FOUND,
-//     AGV_ERROR_NO_HOME_DETECTED,
-//     AGV_ERROR_NO_ENCODER_ATTACHED,
-//     AGV_ERROR_NO_HOMING_SENSOR,
-//     AGV_ERROR_NO_STEPPER_MOTOR,
-//     AGV_WARNING_BATTERY_LOW,
-//     AGV_WARNING,
-//     AGV_INFO_DONE_HOMING,
-//     AGV_INFO_DONE_RESET,
 
-//     SWERVE_WARNING,
-    SWERVE_INFO_INIT,
-    SWERVE_INFO_RESET,
-    SWERVE_INFO_HOME,
-
-    SWERVE_ERROR_NO_HOME_DETECTED,
-    SWERVE_ERROR_NO_ODRIVE_FOUND,
-    SWERVE_ERROR_STEP_MISSMATCH,
-    SWERVE_ERROR_FEEDBACK_OK, // from error checker function, should be output in printStatus()
-    SWERVE_OK
-};
-union isClockWise{
-    struct {
-        bool isEnc_StepCW:1; 
-        bool isEnc_BldcCW:1; 
-        bool isStepCW:1; 
-        bool isOdrCW:1;
-    };
-};
-struct SwervePin {
-    uint8_t stepDir;
-    uint8_t stepPul;
-    #ifdef MOTOR_USES_PIN_ENABLE
-    uint8_t stepEn;  // optional
-    #endif
-    uint8_t encStepA;
-    uint8_t encStepB;
-    uint8_t encHome;
-
-    bool MotorNum;
-
-    HardwareSerial* SerialOdr;  // Communicate with Odrive
-    HardwareSerial* SerialMonitor; // Coms with PC
-    // isClockWise isCW;
-};
-enum unit{
-    degree,
-    radian,
-    revolution,
-    meter,
-    tick,
-    Hz
-};
-struct refSignal{
-    // Turn control
-    double positionTurn;
-    double velocityTurn;
-    unit turnUnit;
-    // Drive control
-    double positionDrive;
-    double velocityDrive;
-    double torqueDrive;
-    unit turnUnit;
-};
 inline int pos2deg(short deg, short res){return ((deg*res)/360);};
 inline long deg2pos(long pos, short res){return ((pos*360)/res);};
-class Swerve_controls{
+class Swerve_module_controls{
     public: // initialization
-        /// @brief Constructor for the Swerve_controls class.
+        /// @brief Constructor for the Swerve_module_controls class.
         /// @details Initializes swerve module with pin configuration and orientation settings.
         ///          Sets up FastAccelStepper engine, stepper motor, and direction encoder.
         /// @param pins Reference to SwervePin structure containing all pin assignments.
         /// @param isCW Union specifying clockwise orientation for each motor (default {0x00}).
-        Swerve_controls(const SwervePin& pins, isClockWise isCW = {0x00});
+        Swerve_module_controls(const SwervePin& pins, isClockWise isCW = {0x00});
         
         /// @brief Initializes the swerve module with speed and acceleration parameters.
         /// @details Sets up stepper motor engine, configures pins, speed, acceleration,
@@ -92,31 +29,33 @@ class Swerve_controls{
         /// @param spd Speed in microseconds per step (lower = faster). Default: 50 µs/step.
         /// @param acc Acceleration in steps per second squared. Default: 10000 steps/s².
         agvEr initSwerve(short spd = 50, short acc = 10000);
-        void initInterrupts(){
-            attachInterruptArg(digitalPinToInterrupt(pins.encStepA), updateEA, this, CHANGE);
-            attachInterruptArg(digitalPinToInterrupt(pins.encStepB), updateEB, this, CHANGE);
-            attachInterruptArg(digitalPinToInterrupt(pins.encHome), homeNow, this, LOW);
-        }
+        /// @brief Initiates the homing sequence for the swerve module.
+        /// @details Calls homingSeq() and calibrates BLDC motor via ODrive.
+        ///          Transitions through START, ARM, and READY phases for proper initialization.
+        void home();
+        
 
         /// @brief Resets all variables and states to their initial values.
         /// @details Clears errors, resets encoder/stepper positions, optionally performs homing.
         /// @param needHome If true (default), performs full homing sequence after reset.
         /// @return agvEr Returns SWERVE_OK on success, or appropriate error code on failure.
         agvEr resetVars(bool needHome = true);
+        
     private:
         FastAccelStepperEngine engine;
         FastAccelStepper *stepper;
         Encoder *Step_enc; // Using a pointer so we can initialize it dynamically
+        // ODriveUART *odrive;
         bool _motorNum; // 0 = Front, 1 = Back motor
         SwervePin pins;
-
-        /// @brief Initiates the homing sequence for the swerve module.
-        /// @details Calls homingSeq() and calibrates BLDC motor via ODrive.
-        ///          Transitions through START, ARM, and READY phases for proper initialization.
-        void home();
+        void initInterrupts(){
+            // attachInterruptArg(digitalPinToInterrupt(pins.encStepA), updateEA, this, CHANGE);
+            // attachInterruptArg(digitalPinToInterrupt(pins.encStepB), updateEB, this, CHANGE);
+            // attachInterruptArg(digitalPinToInterrupt(pins.encHome), homeNow, this, LOW);
+        }
         agvEr homingSeq();
-        void bldc_ReBoot();
         
+        void bldc_ReBoot(); // should be public
         /// @brief Clears error flags from the ODrive motor controller.
         /// @details Sends clear error command ("sc") to reset accumulated error states.
         void bldc_clcEr();
@@ -128,19 +67,19 @@ class Swerve_controls{
         agvEr bldc_prtEr();
     protected:
         static void updateEA(void* arg) {
-            Swerve_controls* instance = static_cast<Swerve_controls*>(arg);
+            Swerve_module_controls* instance = static_cast<Swerve_module_controls*>(arg);
             if (instance->Step_enc != nullptr) {
                 instance->Step_enc->triggerA();
             }
         }
         static void updateEB(void* arg) {
-            Swerve_controls* instance = static_cast<Swerve_controls*>(arg);
+            Swerve_module_controls* instance = static_cast<Swerve_module_controls*>(arg);
             if (instance->Step_enc != nullptr) {
                 instance->Step_enc->triggerB();
             }
         }
         static void homeNow(void* arg) { 
-            Swerve_controls* instance = static_cast<Swerve_controls*>(arg);
+            Swerve_module_controls* instance = static_cast<Swerve_module_controls*>(arg);
             if (instance->stepper->getCurrentPosition() > 0) {
                 instance->stepper->forceStopAndNewPosition(deg2pos(360, MOTOR_MICROSTEPS)); 
                 instance->stepper->moveTo(deg2pos(0, MOTOR_MICROSTEPS));
@@ -151,7 +90,6 @@ class Swerve_controls{
             }
         }
     public: // setting swerve function s
-        
         /// @brief Executes a turn operation by specifying the angle.
         ///        Sets the turning speed for the steering motor.
         ///        Sets the acceleration for the steering motor.
@@ -253,10 +191,11 @@ class Swerve_controls{
         /// @return float Returns the parsed value extracted from the input string.
         float parseWheelVar(String s);
         
+    public:
         /// @brief Prints current position statistics of stepper motor and encoder.
         /// @details Prints stepper position in degrees and encoder angle in degrees to serial monitor.
         /// @return boolean Returns 0 (false) always after printing.
-        boolean printPosStats();
+        bool printPosStats();
         
         /// @brief Prints a status message if SERIAL_DEBUG is enabled.
         /// @details Conditionally prints debug messages based on SERIAL_DEBUG preprocessor definition.
@@ -264,21 +203,21 @@ class Swerve_controls{
         /// @return boolean Returns 0 if printed (SERIAL_DEBUG enabled), 1 if suppressed.
         boolean printStatus(String msg);
 };
-/*
-class Holonomic_drive_controller{
+
+class Swerve_module_kinematics{
     public:
-        Drivetrain_controls *swerveFrontLeft = NULL;
-        Drivetrain_controls *swerveRearRight = NULL;
-        void homeNow(); // calling homeNow() will call home() for all swerve modules
-        agvEr init(); // init all the swerve modules
-        agvEr getInfo();
-        void getInfo_Serialprint(); // required init Serial before calling this function. 
-        void drive_holonomic(float vx, float vy, float vw);
-        void drive_holonomic_wt_Speed(float vx, float vy, float vw, float speed);
-        void drive_holonomic_wt_Speed_Angle(float vx, float vy, float vw, float speed, uint16_t angle);
-        void drive_holonomic_wt_Speed_Angle_Rotation();
+        Swerve_module_kinematics(const SwervePin& pins, isClockWise isCW = {0x00}, wheelPositions wheelPos = wheelPositions());
+        agvEr initSwerveModule();   
+        void getInfo_Serialprint();
+        void resetVars();
+        void driveSwerve(ctrlValues* ref);
     private:
-
-        uint16_t getMinAngleToDesirer(); // there are 2 possible angles to desired angle. Return the one that do not tangle the wires.
-
-};*/
+        Swerve_module_controls *swerveCtrl;     
+        SwervePin pins;
+        wheelPositions wP;
+        // ctrlValues refchas[2];
+        ctrlValues* toSwerveModuleStates(ctrlValues* ref, bool posCtrl = true); // Converting chassis speeds to module states
+        ctrlValues* optimize(ctrlValues* ref); //Module angle optimization
+        ctrlValues* cvModuleStates2Chassis(ctrlValues* ref);// Converting module states to chassis speeds
+        
+};
