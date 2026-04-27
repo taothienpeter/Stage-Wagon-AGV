@@ -11,7 +11,7 @@ int pos2deg(long pos, int res){return ((pos*360)/res);}
 
 void updateE1A() { stepper_1_encoder.triggerA(); }
 void updateE1B() { stepper_1_encoder.triggerB(); }
-void updateH1() {
+void sethome() {
   if(stepper->getCurrentPosition()>0) {stepper->forceStopAndNewPosition(deg2pos(360,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
   else if (stepper->getCurrentPosition()<0) {stepper->forceStopAndNewPosition(0);}
   else {stepper->setCurrentPosition(deg2pos(0,MOTOR_MICROSTEPS));}
@@ -19,20 +19,20 @@ void updateH1() {
   // Serial.println("Home detected! & Done homing");
   isHome = true;
 }
-void homingSeq(){
+void  homingSeq(){
   Serial.println("Homing...");
   stepper->forceStopAndNewPosition(0);
   while (digitalRead(14)&&pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)<181) {
     stepper->move(deg2pos(1,MOTOR_MICROSTEPS));  // Move forward 180 degs
-    // updateH1();
+    sethome();
     Serial.println("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getAngle());
-    delay(10);  // Wait for move to complete or be stopped
+    delay(2);  // Wait for move to complete or be stopped
   }
   while (digitalRead(14)&&pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)>-181) {
     stepper->move(deg2pos(-1,MOTOR_MICROSTEPS));  // Then move backward 360 degs
-    // updateH1();
+    sethome();
     Serial.println("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getAngle());
-    delay(10);  // Wait for move to complete or be stopped
+    delay(2);  // Wait for move to complete or be stopped
   }
   short calib = stepper->getCurrentPosition();
   Serial.println("Position: " + (String)(stepper->getCurrentPosition()) + " \tEncoder: " + (String)stepper_1_encoder.getTicks());
@@ -44,7 +44,7 @@ void homingSeq(){
   calib = stepper->getCurrentPosition()-calib;
   Serial.println("Position: " + (String)(calib));
   stepper->move(-calib);
-  // updateH1();
+  // sethome();
   // stepper->forceStopAndNewPosition(0);
   // stepper->stopMove();
   // stepper->setCurrentPosition(0);
@@ -55,11 +55,11 @@ void setup(){
     stepper_1_encoder.reset();
     attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1A), updateE1A, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1B), updateE1B, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1HOME), updateH1, LOW);
+    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1HOME), sethome, LOW);
 
     engine.init();
-    stepper = engine.stepperConnectToPin(MOTOR_1_PIN_PUL);
-    stepper->setDirectionPin(MOTOR_1_PIN_DIR);
+    stepper = engine.stepperConnectToPin(MOTOR_2_PIN_PUL);
+    stepper->setDirectionPin(MOTOR_2_PIN_DIR);
     stepper->setEnablePin(enablePinStepper); stepper->setAutoEnable(true);
     
     stepper->setSpeedInUs(50);

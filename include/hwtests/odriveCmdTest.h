@@ -10,14 +10,13 @@ void setup() {
     Serial2.print("sc\n"); // Clear errors
 }
 void loop() {
-      if (State != READY) {
         switch(State) {
             case START:{
                 Serial.println("Calibrating MOTOR ...");
                 Serial2.print("w axis0.requested_state 4\n");
                 Serial2.print("w axis1.requested_state 4\n");
                 Serial2.print("r axis0.error\n");
-                delay(3000);
+                delay(5000);
                 State = ARM;
                 break;
             }
@@ -29,7 +28,7 @@ void loop() {
                 break;
             }    
             case READY:{
-                delay(8000);
+                delay(10000);
                 Serial2.print("w axis0.controller.input_pos 0\n"); // Zero position target
                 Serial2.print("w axis1.controller.input_pos 0\n");
                 Serial2.print("w axis0.requested_state 8\n"); // Arm
@@ -38,7 +37,6 @@ void loop() {
                 Serial.println("Type your 'p' command to move.");
                 break;
             }
-        }
     }
     // 2. Simple Two-Way Serial Relay
     if (Serial.available()) {
