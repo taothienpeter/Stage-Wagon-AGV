@@ -24,8 +24,8 @@
 #define ENC_STEPPER_1HOME 35
 #define ENC_STEPPER_2HOME 34
 
-#define ENC_BLDC_TPR (6000) // BLDC encoder's ticks per revolution 
-#define ENC_STEP_TPR (6000) // Stepper encoder's ticks per revolution 
+#define ENC_BLDC_TPR (2.5*4*600) // BLDC encoder's ticks per revolution 
+#define ENC_STEP_TPR (2.5*4*600) // Stepper encoder's ticks per direction of swerve revolution 
 
 #define BACKLASH_ENC 7
 #define BACKLASH_STEP 5
@@ -46,7 +46,7 @@
 #endif
 
 #define MOTOR_ANGLE 1.8
-#define MOTOR_STEPS ((360/MOTOR_ANGLE)*2.5*5)
+#define MOTOR_STEPS ((360/MOTOR_ANGLE)*2.5*5) // 2.5 is gear ratio
 #define MOTOR_MICROSTEPS_SCALE 16 // 2 4 8 16 32
 #define MOTOR_MICROSTEPS ((int16_t)MOTOR_STEPS*MOTOR_MICROSTEPS_SCALE)
 #define MOTOR_MICROANGLE (MOTOR_ANGLE / MOTOR_MICROSTEPS_SCALE)

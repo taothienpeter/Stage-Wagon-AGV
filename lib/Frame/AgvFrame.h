@@ -7,6 +7,7 @@
 // #define enablePinStepper 2
 #define SERIAL_DEBUG
 #define DELTA_T PROCESS_DELTA_T
+#define temp
 /// @brief 0x.. hexagall number which in decamal: 
 ///             first num is type of error: 1 for ERROR, 2 for WARING, 3 for INFO
 ///             second device's code:       1 for Encoders, 2 for Steppers, 3 for Home sens, 4 for BLDCs, 5 for UWBs, 6 for IMU, 7 for Battery
@@ -100,7 +101,7 @@ class Swerve_module_controls{
         /// @param step_s_s The acceleration value in steps per second squared
         /// @return agvEr Returns an error code indicating success or failure of the operation.
         agvEr runTurnAngle(double Angle); // changing swerve direction
-        agvEr setTurnSpeed(double SpeedHz); //or update speed()
+        agvEr setTurnSpeed(double speed, unit u = Us); //or update speed()
         agvEr setTurnAccel(int16_t step_s_s); // changing swerve acceleration
         
         /// @brief Runs the drive motor at a specified speed.
@@ -140,31 +141,37 @@ class Swerve_module_controls{
         /// @param u The unit in which the position should be returned (degree, radian, revolution, tick, Hz, meter).
         /// @return short Returns the position of the direction encoder in the specified unit.
         short getDirectionEncoderPos(unit u);
+        #ifndef temp
         /// @return double Returns normalized position: -1 = full reverse, 0 = center, 1 = full forward.
         double getDirectionEncoderPos_UnitOne();
-
+        #endif
+        #ifndef temp
         /// @brief Retrieves the velocity of the direction encoder over a given time interval `dt`, in the specified unit.
         /// @param dt The time interval (in seconds) over which the velocity is calculated.
         /// @param u The unit in which the velocity should be returned (default is degree).
         /// @return double Returns the velocity of the direction encoder in the specified unit.
         double getDirectionEncoderVelo(float dt, unit u = degree);
+        #endif
+        #ifndef temp
         /// @return double Returns the normalized velocity of the direction encoder (-1 to 1).
         double getDirectionEncoderVelo_UnitOne(float dt);
-
+        #endif
         /// @brief Retrieves the current position of the directional motor in the specified unit.
         /// @param u The unit in which the position should be returned (degree, radian, revolution, tick, Hz, meter).
         /// @return long Returns the position of the directional motor in the specified unit.
         long getDirectionPosiotion(unit u); 
+        #ifndef temp
         /// @return double Returns the normalized position of the directional motor (-1 to 1).
         double getDirectionPosiotion_UnitOne(); 
-
+        #endif
         /// @brief Retrieves the velocity of the directional motor in the specified unit (default is degree per second).
         /// @param u The unit in which the velocity should be returned (default is degree).
         /// @return double Returns the velocity of the directional motor in the specified unit.
         double getDirectionVelocity(unit u = degree); 
+        #ifndef temp
         /// @return double Returns the normalized velocity of the directional motor (-1 to 1).
         double getDirectionVelocity_UnitOne(); 
-
+        #endif
         /// @brief Checks if there has been any accumulated error due to skipped steps in the stepper motor.
         /// @return bool Returns true if step skipping has occurred, false otherwise.
         bool checkStepSkiping(); 
@@ -175,9 +182,10 @@ class Swerve_module_controls{
         float getWheelPosition(); 
         /// @return float Returns the velocity of the wheel motor.
         float getWheelVelocity(); 
+        #ifndef temp
         /// @return float Returns the torque output of the wheel motor.
         float getWheelTorque();
-
+        #endif
         /// @brief Retrieves additional variables from the wheel encoder.
         /// @return float Returns the parsed variable from the wheel encoder.
         float getWheelEncoderVariables();
@@ -206,18 +214,22 @@ class Swerve_module_controls{
 
 class Swerve_module_kinematics{
     public:
-        Swerve_module_kinematics(const SwervePin& pins, isClockWise isCW = {0x00}, wheelPositions wheelPos = wheelPositions());
+        Swerve_module_kinematics(const SwervePin& pins, wheelPositions wheelPos = wheelPositions(), isClockWise isCW = {0x00});
         agvEr initSwerveModule();   
+        /// @brief 
         void getInfo_Serialprint();
         void resetVars();
-        void driveSwerve(ctrlValues* ref);
+        void driveSwerve(ctrlValues* ref, bool posCtrl = true);
     private:
         Swerve_module_controls *swerveCtrl;     
         SwervePin pins;
         wheelPositions wP;
-        // ctrlValues refchas[2];
-        ctrlValues* toSwerveModuleStates(ctrlValues* ref, bool posCtrl = true); // Converting chassis speeds to module states
-        ctrlValues* optimize(ctrlValues* ref); //Module angle optimization
-        ctrlValues* cvModuleStates2Chassis(ctrlValues* ref);// Converting module states to chassis speeds
-        
+        float kp = 1.0; // pos gains
+        float ktheta = 2.0; // angle gains
+        agvEr computeVelocity(pose current, pose target, vel& ref);
+        // ctrlValues* toSwerveModuleStates(ctrlValues* ref, bool posCtrl = true); // Converting chassis speeds to module states
+        // ctrlValues* optimize(ctrlValues* ref, bool posCtrl = true); //Module angle optimization
+        // ctrlValues* cvModuleStates2Chassis(ctrlValues* ref);// Converting module states to chassis speeds
+        // ctrlValues* getModuleState(ctrlValues* ref);
+        wheelState computeWheel(vel ref);
 };

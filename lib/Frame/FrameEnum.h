@@ -12,6 +12,7 @@ enum agvEr{
 //     AGV_WARNING,
     AGV_INFO_CLAMP,
     AGV_INFO_OPTIMISE,
+    AGV_INFO_COMPUTE_VELO,
     AGV_INFO_DONE_HOMING,   
 //     AGV_INFO_DONE_RESET,
 
@@ -56,6 +57,7 @@ enum unit{
     revolution,
     meter,
     tick,
+    Us,
     Hz
 };
 struct wheelPositions { 
@@ -64,24 +66,32 @@ struct wheelPositions {
 
     wheelPositions() : posW(0), posB(0) {}
     wheelPositions(float w, float b) : posW(w), posB(b) {}
-    
     float getR() const { return sqrt(posW*posW+posB*posB); }
     float getTheta() const { return atan2(posB, posW); }
 };
-struct ctrlValues {
-    // Turn control
-    double posTurn; // absolute pos
-    // double velTurn; // setting speed only
-    // unit turnUnit; // degree
-    // Drive control
-    double posDrive; // absolute pos
-    // double velDrive; // speed control 
-    // unit driveUnit; // revolution
+// struct ctrlValues {
+//     // instantaneous velocity and orientation controllers (wheel state)
+//     double posTurn; // absolute pos in degree
+//     double posDrive; // absolute pos 
+//     double velDrive; // speed control
 
-    // double velocity = 0;
-    // double angularVel = 0;
+//     double position;
+//     double angle;
+//     bool posCtrl;
 
-    double position;
+//     double velox;
+//     double veloy;
+//     double angularVel;
+// };
+
+struct pose{
+    double x, y , theta;
+};
+struct vel{
+    double velx, vely, omega;
+};
+struct wheelState{
+    double speed;
     double angle;
 };
 #endif
