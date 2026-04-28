@@ -30,19 +30,20 @@ ctrlValues* Swerve_module_kinematics::toSwerveModuleStates(ctrlValues* ref, bool
         ref = this->optimize(ref);
         return ref;
     }
-    double x = ref->velocity*cos(ref->angle) + cos(ref->angularVel)*wP.posB;
-    double y = ref->velocity*sin(ref->angle) + sin(ref->angularVel)*wP.posW;
-    ref->velTurn = atan(y/x);
-    ref->velDrive = sqrt(x*x+y*y);
-    ref = this->optimize(ref);
-    ref = this->optimize(ref);
+    // double x = ref->velocity*cos(ref->angle) + cos(ref->angularVel)*wP.posB;
+    // double y = ref->velocity*sin(ref->angle) + sin(ref->angularVel)*wP.posW;
+    // ref->velTurn = atan(y/x);
+    // ref->velDrive = sqrt(x*x+y*y);
+    // ref = this->optimize(ref);
+    // ref = this->optimize(ref);
 
     return ref;
 }
 ctrlValues* Swerve_module_kinematics::optimize(ctrlValues* ref){
+    
     // prevent jitter
-    if(abs(ref->velTurn) < JITTER_PERCENTAGE) ref->velTurn = 0;
-    if(abs(ref->velDrive) < JITTER_PERCENTAGE) ref->velDrive = 0;
+    // if(abs(ref->velTurn) < JITTER_PERCENTAGE) ref->velTurn = 0;
+    // if(abs(ref->velDrive) < JITTER_PERCENTAGE) ref->velDrive = 0;
     // get the angle
     double delta = ref->posTurn - swerveCtrl->getDirectionEncoderPos(degree);
     // clamp to -180 to 180
@@ -55,12 +56,15 @@ ctrlValues* Swerve_module_kinematics::optimize(ctrlValues* ref){
         ref->posDrive *= -1.0; // Reverse the motor power via pointer
     }
     // cosin compensation
-    ref->velDrive *= cos(delta);
+    // ref->velDrive *= cos(delta);
     ref->posTurn +=  delta;
-
+    
   return ref;
+}
+ctrlValues* Swerve_module_kinematics::cvModuleStates2Chassis(ctrlValues* ref){
+    return ref;
 }
 // required init Serial before calling this function.
 void Swerve_module_kinematics::getInfo_Serialprint(){
-    if(!swerveCtrl->printPosStats()) pins.SerialMonitor->println("Swerve print error!");
+    // if(!swerveCtrl->printPosStats()) pins.SerialMonitor->println("Swerve print error!");
 }  

@@ -2,6 +2,8 @@
 #define __Test__
 
 #ifdef __Test__ 
+
+// #include "tests/agvCtrlTest.h"
 #include "tests/agvTest.h"
 // #include "tests/dirCtrlTest.h"
 // #include "tests/stepperLibTest.h"

@@ -21,7 +21,7 @@ class Swerve_module_controls{
         ///          Sets up FastAccelStepper engine, stepper motor, and direction encoder.
         /// @param pins Reference to SwervePin structure containing all pin assignments.
         /// @param isCW Union specifying clockwise orientation for each motor (default {0x00}).
-        Swerve_module_controls(const SwervePin& pins, isClockWise isCW = {0x00});
+        Swerve_module_controls(const SwervePin pins, isClockWise isCW = {0x00});
         
         /// @brief Initializes the swerve module with speed and acceleration parameters.
         /// @details Sets up stepper motor engine, configures pins, speed, acceleration,
@@ -42,16 +42,16 @@ class Swerve_module_controls{
         agvEr resetVars(bool needHome = true);
         
     private:
-        FastAccelStepperEngine engine;
+        static FastAccelStepperEngine engine;
         FastAccelStepper *stepper;
         Encoder *Step_enc; // Using a pointer so we can initialize it dynamically
         // ODriveUART *odrive;
         bool _motorNum; // 0 = Front, 1 = Back motor
         SwervePin pins;
         void initInterrupts(){
-            // attachInterruptArg(digitalPinToInterrupt(pins.encStepA), updateEA, this, CHANGE);
-            // attachInterruptArg(digitalPinToInterrupt(pins.encStepB), updateEB, this, CHANGE);
-            // attachInterruptArg(digitalPinToInterrupt(pins.encHome), homeNow, this, LOW);
+            attachInterruptArg(digitalPinToInterrupt(pins.encStepA), updateEA, this, CHANGE);
+            attachInterruptArg(digitalPinToInterrupt(pins.encStepB), updateEB, this, CHANGE);
+            attachInterruptArg(digitalPinToInterrupt(pins.encHome), homeNow, this, LOW);
         }
         agvEr homingSeq();
         
@@ -89,7 +89,8 @@ class Swerve_module_controls{
                 instance->stepper->setCurrentPosition(deg2pos(0, MOTOR_MICROSTEPS));
             }
         }
-    public: // setting swerve function s
+    public: // setting swerve function
+               
         /// @brief Executes a turn operation by specifying the angle.
         ///        Sets the turning speed for the steering motor.
         ///        Sets the acceleration for the steering motor.
@@ -124,7 +125,7 @@ class Swerve_module_controls{
         /// @return agvEr Returns SWERVE_OK on success.
         agvEr setDriveAccel(int16_t inertia); 
         agvEr setDriveAbsolutePos(int16_t pos);
-        agvEr runDriveDistance(double tuns); // changing swerve direction
+        agvEr runDriveDistance(double turns); // changing swerve direction
         agvEr setDriveTorque(uint8_t torque); // torque in Nm 
     private:
         /// @brief Sends a command to the ODrive motor controller via serial communication.
@@ -181,7 +182,6 @@ class Swerve_module_controls{
         /// @return float Returns the parsed variable from the wheel encoder.
         float getWheelEncoderVariables();
 
-        
         /// @brief Checks and retrieves error information from the wheel encoder.
         /// @return agvEr Returns an error code indicating the status of the wheel encoder.
         agvEr checkWheelEncoderInfos();
@@ -190,7 +190,6 @@ class Swerve_module_controls{
         /// @param s The input string containing wheel-related variables.
         /// @return float Returns the parsed value extracted from the input string.
         float parseWheelVar(String s);
-        
     public:
         /// @brief Prints current position statistics of stepper motor and encoder.
         /// @details Prints stepper position in degrees and encoder angle in degrees to serial monitor.
@@ -201,7 +200,8 @@ class Swerve_module_controls{
         /// @details Conditionally prints debug messages based on SERIAL_DEBUG preprocessor definition.
         /// @param msg The status message string to print.
         /// @return boolean Returns 0 if printed (SERIAL_DEBUG enabled), 1 if suppressed.
-        boolean printStatus(String msg);
+        bool printStatus(String msg);
+        
 };
 
 class Swerve_module_kinematics{

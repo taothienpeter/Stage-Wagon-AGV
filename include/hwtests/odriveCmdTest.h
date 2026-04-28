@@ -1,4 +1,5 @@
 #include "Ctrl_config.h"
+#include "Arduino.h"
 enum Phase { START, ARM, READY };
 Phase State = START;
 

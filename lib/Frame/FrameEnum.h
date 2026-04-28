@@ -71,17 +71,17 @@ struct wheelPositions {
 struct ctrlValues {
     // Turn control
     double posTurn; // absolute pos
-    double velTurn; // setting speed only
-    unit turnUnit; // degree
+    // double velTurn; // setting speed only
+    // unit turnUnit; // degree
     // Drive control
     double posDrive; // absolute pos
-    double velDrive; // speed control 
-    unit driveUnit; // revolution
+    // double velDrive; // speed control 
+    // unit driveUnit; // revolution
 
-    double velocity = 0;
-    double angularVel = 0;
+    // double velocity = 0;
+    // double angularVel = 0;
 
-    double position = 0;
-    double angle = 0;
+    double position;
+    double angle;
 };
 #endif
