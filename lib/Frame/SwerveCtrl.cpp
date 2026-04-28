@@ -206,12 +206,12 @@ agvEr Swerve_module_controls::runDriveDistance(double turns){
 agvEr Swerve_module_controls::setDriveTorque(uint8_t torque){
     return this->bldc_sendCmd("c " + (String)_motorNum + " " + (String)torque + " 0 )");
 }
-short Swerve_module_controls::getDirectionEncoderPos(unit u){
+double Swerve_module_controls::getDirectionEncoderPos(unit u){
     return u==degree? Step_enc->getAngle() : Step_enc->getTicks();
 }
 #ifndef temp
 double Swerve_module_controls::getDirectionEncoderPos_UnitOne(){
-    return this->getDirectionEncoderPos(degree)/360;
+    return this->getDirectionEncoderPos(degree)/360;ref.velx * sin(pose.theta) + ref.vely * cos(pose.theta)
 }
 #endif
 #ifndef temp
@@ -230,12 +230,12 @@ double Swerve_module_controls::getDirectionEncoderVelo_UnitOne(float dt){
 }
 #endif
 //   Get direction position
-long Swerve_module_controls::getDirectionPosiotion(unit u){
+long Swerve_module_controls::getDirectionPosition(unit u){
     return u==degree? pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS):  stepper->getCurrentPosition();
 }
 #ifndef temp
-double Swerve_module_controls::getDirectionPosiotion_UnitOne(){ 
-    return this->getDirectionPosiotion(degree)/360;
+double Swerve_module_controls::getDirectionPosition_UnitOne(){ 
+    return this->getDirectionPosition(degree)/360;
 }
 #endif
 double Swerve_module_controls::getDirectionVelocity(unit u){
@@ -247,7 +247,7 @@ double Swerve_module_controls::getDirectionVelocity_UnitOne(){
 }
 #endif
 bool Swerve_module_controls::checkStepSkiping(){
-    return (abs(this->getDirectionEncoderPos(degree)/this->getDirectionPosiotion(degree))<0.005)?true: false;
+    return (abs(this->getDirectionEncoderPos(degree)/this->getDirectionPosition(degree))<0.005)?true: false;
 }
 float Swerve_module_controls::getWheelPosition(){
     if(this->bldc_sendCmd("r "+(String)_motorNum+".controller.input_pos")!=SWERVE_OK) return 0;

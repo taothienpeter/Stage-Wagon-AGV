@@ -11,8 +11,9 @@ enum agvEr{
 //     AGV_WARNING_BATTERY_LOW,
 //     AGV_WARNING,
     AGV_INFO_CLAMP,
-    AGV_INFO_OPTIMISE,
-    AGV_INFO_COMPUTE_VELO,
+    AGV_INFO_COMPUTE_WHEELSTATE,
+    AGV_INFO_COMPUTE_FRAMEVELO,
+    AGV_INFO_DRIVE_FRAMEVELO,
     AGV_INFO_DONE_HOMING,   
 //     AGV_INFO_DONE_RESET,
 
@@ -69,29 +70,14 @@ struct wheelPositions {
     float getR() const { return sqrt(posW*posW+posB*posB); }
     float getTheta() const { return atan2(posB, posW); }
 };
-// struct ctrlValues {
-//     // instantaneous velocity and orientation controllers (wheel state)
-//     double posTurn; // absolute pos in degree
-//     double posDrive; // absolute pos 
-//     double velDrive; // speed control
-
-//     double position;
-//     double angle;
-//     bool posCtrl;
-
-//     double velox;
-//     double veloy;
-//     double angularVel;
-// };
-
+struct wheelState{
+    double speed;
+    double angle;
+};
 struct pose{
     double x, y , theta;
 };
 struct vel{
     double velx, vely, omega;
-};
-struct wheelState{
-    double speed;
-    double angle;
 };
 #endif

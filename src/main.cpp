@@ -4,7 +4,8 @@
 #ifdef __Test__ 
 
 // #include "tests/agvCtrlTest.h"
-#include "tests/agvTest.h"
+// #include "tests/agvTest.h"
+#include "tests/agvTest2.h"
 // #include "tests/dirCtrlTest.h"
 // #include "tests/stepperLibTest.h"
 // #include "tests/encoderLibTest.h"

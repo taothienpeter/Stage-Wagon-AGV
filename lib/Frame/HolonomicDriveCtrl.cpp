@@ -10,87 +10,67 @@ agvEr Swerve_module_kinematics::initSwerveModule(){
 }
 // agvEr initAgv(){for (short i = 0; i < 2; i++){swerve[i]->initSwerve();}};
 void Swerve_module_kinematics::getInfo_Serialprint(){
-    // if(!swerveCtrl->printPosStats()) pins.SerialMonitor->println("Swerve print error!");
+    if(!swerveCtrl->printPosStats()) pins.SerialMonitor->println("Swerve print error!");
 }  
-void Swerve_module_kinematics::resetVars(){
-    swerveCtrl->resetVars();
+agvEr Swerve_module_kinematics::resetVars(){
+    return swerveCtrl->resetVars();
 }; // calling homeNow() will call home() for all swerve modules
-
-void Swerve_module_kinematics::driveSwerve(ctrlValues* ref, bool posCtrl){
-    ref = this->toSwerveModuleStates(ref, true);
-    swerveCtrl->runTurnAngle(ref->posTurn);
-    if(posCtrl){
-        swerveCtrl->runDriveDistance(ref->posDrive);
-    }else{
-        swerveCtrl->runDriveSpeed(ref->velDrive);  // check for type of controller
-    }
+agvEr Swerve_module_kinematics::driveSwervePose(pose& pose){
+    if(this->computeVelocity(prePose, pose, ref)==AGV_INFO_COMPUTE_FRAMEVELO) pins.SerialMonitor->print("ve");
+    this->driveSwerveVel(ref);
+    prePose = pose;
+    return AGV_INFO_DRIVE_FRAMEVELO;
+}
+agvEr Swerve_module_kinematics::driveSwerveVel(vel& vel){
+    wS = this->computeWheel(vel, swerveCtrl->getDirectionPosition(degree));
+    swerveCtrl->runTurnAngle(wS.angle);
+    swerveCtrl->runDriveSpeed(wS.speed);  // check for type of controller
+    return AGV_INFO_COMPUTE_WHEELSTATE;
 }
 agvEr Swerve_module_kinematics::computeVelocity(pose current, pose target, vel& ref){
-    // Error in world frame
-    double etheta = target.theta - current.theta;
-    // Normalize angle
-    while (etheta > 180) etheta -= 360;
-    while (etheta < -180) etheta += 360;
+    // Normalize angle error in world frame
+    double etheta = wrapAngle(target.theta - current.theta);
     // P controller
     ref.velx = kp * (cos(current.theta) * (target.x - current.x) + sin(current.theta) * (target.y - current.y));
     ref.vely = kp * (-sin(current.theta) * (target.x - current.x) + cos(current.theta) * (target.y - current.y));
     ref.omega = ktheta * etheta;
-    return AGV_INFO_COMPUTE_VELO;
+    return AGV_INFO_COMPUTE_FRAMEVELO;
 }
-wheelState Swerve_module_kinematics::computeWheel(vel ref){
+wheelState Swerve_module_kinematics::computeWheel(vel ref, double currentSteerAngle){
     double vix = ref.velx - ref.omega * wP.posB;
     double viy = ref.vely + ref.omega * wP.posW;
     wheelState w;
     w.speed = sqrt(vix*vix + viy*viy);
     w.angle = atan2(viy, vix);
+
+    // optimize turn angle
+    double delta = wrapAngle(w.angle - currentSteerAngle);
+    if (fabs(delta) > 90) {
+        w.angle = wrapAngle(w.angle + 180);
+        w.speed *= -1.0;
+    };
+    // cosine compensation
+    double angleError = wrapAngle(w.angle - currentSteerAngle);
+    w.speed *= cos(angleError);
+    // prevent jitter
+    if(abs(wS.speed) < JITTER_PERCENTAGE) wS.speed = 0;
+
     return w;
 };
-// ctrlValues* Swerve_module_kinematics::toSwerveModuleStates(ctrlValues* ref, bool posCtrl){
-    // if(posCtrl){
-    //     double x = ref->position*cos(ref->angle) + cos(ref->angle)*wP.posB;
-    //     double y = ref->position*sin(ref->angle) + sin(ref->angle)*wP.posW;
-    //     ref->posTurn = atan(y/x);
-    //     ref->posDrive = sqrt(x*x+y*y);
-    //     ref = this->optimize(ref, posCtrl);
-    //     return ref;
-    // }
-    // double x = ref->velocity*cos(ref->angle) + cos(ref->angularVel)*wP.posB;
-    // double y = ref->velocity*sin(ref->angle) + sin(ref->angularVel)*wP.posW;
-    // ref->posTurn = atan(y/x);
-    // ref->velDrive = sqrt(x*x+y*y);
-    // ref = this->optimize(ref, posCtrl);
-//     return ref;
-// }
-// ctrlValues* Swerve_module_kinematics::optimize(ctrlValues* ref, bool posCtrl){
-//     // scale speed for accurate position control
+agvEr Swerve_module_kinematics::computeChassisVelocity(wheelState wS, vel& ref){
+    ref.velx += wS.speed * cos(wS.angle);
+    ref.vely += wS.speed * sin(wS.angle);
 
-//     // prevent jitter
-//     if(!posCtrl && abs(ref->velDrive) < JITTER_PERCENTAGE) ref->velDrive = 0;
-//     // get the angle
-//     double delta = ref->posTurn - swerveCtrl->getDirectionEncoderPos(degree);
-//     // clamp to -180 to 180
-//     delta = fmod(delta + 180.0, 360.0);
-//     if (delta < 0) delta += 360.0;
-//     delta -= 180.0;
-//     // check optimal turn angle
-//     if (abs(delta) > 90.0) {
-//         delta -= (delta > 0 ? 180.0 : -180.0);
-//         ref->posDrive *= -1.0; // Reverse the motor power via pointer
-//     }
-//     // cosin compensation
-//     if(!posCtrl) ref->velDrive *= cos(delta);
-//     // Pre-normalize
-
-//     // Post-normalize
-    
-//     ref->posTurn +=  delta;
-//   return ref;
-// }
-// ctrlValues* Swerve_module_kinematics::cvModuleStates2Chassis(ctrlValues* ref){
-//     return ref;
-// }
-// ctrlValues* Swerve_module_kinematics::getModuleState(ctrlValues* ref){
-//     return ref;
-// }
-// required init Serial before calling this function.
-
+    double r2 = wP.posW * wP.posW + wP.posB * wP.posB;
+    if (r2 > 1e-6) {
+        ref.omega += (wS.speed * sin(wS.angle) * wP.posW - wS.speed * cos(wS.angle) * wP.posB) / r2;
+    }
+    return AGV_INFO_COMPUTE_FRAMEVELO;
+}
+agvEr Swerve_module_kinematics::updateOdometry(pose& pose, vel ref, float dt){
+    pose.x += (ref.velx * cos(pose.theta) - ref.vely * sin(pose.theta)) * dt;
+    pose.y += (ref.velx * sin(pose.theta) + ref.vely * cos(pose.theta)) * dt;
+    pose.theta += ref.omega * dt;
+    pose.theta = wrapAngle(pose.theta);
+    return AGV_INFO_COMPUTE_FRAMEVELO;
+}

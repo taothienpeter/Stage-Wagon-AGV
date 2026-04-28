@@ -32,8 +32,7 @@ wheelPositions wheelPos[2] = {
 Swerve_module_kinematics *swerve[2] = {new Swerve_module_kinematics(pins[0], wheelPos[0], {0x00}), 
                                        new Swerve_module_kinematics(pins[1], wheelPos[1], {0x00})};
 // Swerve_module_controls *swerve[2] = {new Swerve_module_controls(pins[0]), new Swerve_module_controls(pins[1])};
-ctrlValues ref = {0.0,0.0,0.0,0.0}; // only use posTurn and velDrive
-
+pose Pose = {0, 0, 0};
 void setup(){
     // Initialize Serial first
     Serial.begin(MONITOR_BAUDRATE);
@@ -54,30 +53,27 @@ void loop(){
       
         switch(data[0]){
             case 'n':
-                ref.position = 1;
-                ref.angle = 0;
+                Pose = {1, 0};
                 break;
             case 'w':
-                ref.position = 1;
-                ref.angle = -90;
+                Pose = {0, -1};
                 break;
             case 's':
-                ref.position = -1;
-                ref.angle = 0;
+                Pose = {-1, 0};
                 break;
             case 'e':
-                ref.position = 1;
-                ref.angle = 90;
+                Pose = {0, 1};
                 break;
             case 'r':
-                ref.position = 0;
-                ref.angle = 0;
-                swerve[0]->resetVars();
-                swerve[0]->resetVars();
+                Pose = {0, 0, 90};
+                break;
+            default:
+                Serial.println("Invalid command");
+                break;
         }
         for (short i=0; i<2; i++){
-            swerve[i]->driveSwerve(&ref);
+            swerve[i]->driveSwervePose(Pose);
         }
     }
-    delay(5); // delta t
+    delay(5); // delta t = 0.005s
 }

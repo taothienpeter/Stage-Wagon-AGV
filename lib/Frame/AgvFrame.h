@@ -140,7 +140,7 @@ class Swerve_module_controls{
         /// @brief Retrieves the current position of the direction encoder in the specified unit.
         /// @param u The unit in which the position should be returned (degree, radian, revolution, tick, Hz, meter).
         /// @return short Returns the position of the direction encoder in the specified unit.
-        short getDirectionEncoderPos(unit u);
+        double getDirectionEncoderPos(unit u);
         #ifndef temp
         /// @return double Returns normalized position: -1 = full reverse, 0 = center, 1 = full forward.
         double getDirectionEncoderPos_UnitOne();
@@ -159,10 +159,10 @@ class Swerve_module_controls{
         /// @brief Retrieves the current position of the directional motor in the specified unit.
         /// @param u The unit in which the position should be returned (degree, radian, revolution, tick, Hz, meter).
         /// @return long Returns the position of the directional motor in the specified unit.
-        long getDirectionPosiotion(unit u); 
+        long getDirectionPosition(unit u); 
         #ifndef temp
         /// @return double Returns the normalized position of the directional motor (-1 to 1).
-        double getDirectionPosiotion_UnitOne(); 
+        double getDirectionPosition_UnitOne(); 
         #endif
         /// @brief Retrieves the velocity of the directional motor in the specified unit (default is degree per second).
         /// @param u The unit in which the velocity should be returned (default is degree).
@@ -211,25 +211,33 @@ class Swerve_module_controls{
         bool printStatus(String msg);
         
 };
-
+inline double wrapAngle(double a) {
+    while (a > M_PI)  a -= 360;
+    while (a < -M_PI) a += 360;
+    return a;
+}
 class Swerve_module_kinematics{
     public:
         Swerve_module_kinematics(const SwervePin& pins, wheelPositions wheelPos = wheelPositions(), isClockWise isCW = {0x00});
         agvEr initSwerveModule();   
         /// @brief 
         void getInfo_Serialprint();
-        void resetVars();
-        void driveSwerve(ctrlValues* ref, bool posCtrl = true);
+        agvEr resetVars();
+        agvEr driveSwervePose(pose& pose); // control using next pose
+        agvEr driveSwerveVel(vel& vel); // control usign velocity
     private:
         Swerve_module_controls *swerveCtrl;     
         SwervePin pins;
         wheelPositions wP;
+        wheelState wS;
+        vel ref;
+        pose prePose = {0,0,0};
         float kp = 1.0; // pos gains
         float ktheta = 2.0; // angle gains
+        // agvEr setPrePose();
         agvEr computeVelocity(pose current, pose target, vel& ref);
-        // ctrlValues* toSwerveModuleStates(ctrlValues* ref, bool posCtrl = true); // Converting chassis speeds to module states
-        // ctrlValues* optimize(ctrlValues* ref, bool posCtrl = true); //Module angle optimization
-        // ctrlValues* cvModuleStates2Chassis(ctrlValues* ref);// Converting module states to chassis speeds
-        // ctrlValues* getModuleState(ctrlValues* ref);
-        wheelState computeWheel(vel ref);
+        wheelState computeWheel(vel ref, double currentSteerAngle);
+
+        agvEr computeChassisVelocity(wheelState wS, vel& ref);
+        agvEr updateOdometry(pose& pose, vel ref, float dt);
 };
