@@ -5,7 +5,17 @@ Swerve_module_kinematics::Swerve_module_kinematics(const SwervePin& pins, wheelP
     swerveCtrl = new Swerve_module_controls(pins, isCW);
 }
 // init all the swerve modules
+agvEr Swerve_module_kinematics::calibSwerve(calibState state){
+    // scan for homing position
+    if(state == stepCW || state == stepCCW || state == stepTruehome) {
+        swerveCtrl->calibStepper(state);
+    }else{
+        swerveCtrl->calibBLDC(state);
+    };
+    return SWERVE_OK;
+}
 agvEr Swerve_module_kinematics::initSwerveModule(){
+    // if(engineInit)this->initSwerveModuleOnce(); // switch to using move() & moveTo() and intterrupts or polling to stop the motor
     return swerveCtrl->initSwerve();
 }
 // agvEr initAgv(){for (short i = 0; i < 2; i++){swerve[i]->initSwerve();}};
@@ -44,8 +54,7 @@ wheelState Swerve_module_kinematics::computeWheel(vel ref, double currentSteerAn
     w.angle = atan2(viy, vix);
 
     // optimize turn angle
-    double delta = wrapAngle(w.angle - currentSteerAngle);
-    if (fabs(delta) > 90) {
+    if (fabs(wrapAngle(w.angle - currentSteerAngle)) > 90) {
         w.angle = wrapAngle(w.angle + 180);
         w.speed *= -1.0;
     };

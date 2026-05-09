@@ -50,6 +50,7 @@ struct SwervePin {
 
     HardwareSerial* SerialOdr;  // Communicate with Odrive
     HardwareSerial* SerialMonitor; // Coms with PC
+    FastAccelStepperEngine* stepperEngine;
     // isClockWise isCW;
 };
 enum unit{
@@ -60,6 +61,14 @@ enum unit{
     tick,
     Us,
     Hz
+};
+enum calibState{ 
+    stepCW,
+    stepCCW,
+    stepTruehome,
+    bldcMotor,
+    bldcEncoder,
+    bldcArmed,
 };
 struct wheelPositions { 
     float posW;

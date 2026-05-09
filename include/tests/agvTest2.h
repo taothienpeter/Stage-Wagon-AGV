@@ -1,5 +1,6 @@
 #include "AgvFrame.h"
 #include "FrameEnum.h"
+FastAccelStepperEngine engine = FastAccelStepperEngine();
 SwervePin pins[2] = {{
     .stepDir = MOTOR_1_PIN_DIR,
     .stepPul = MOTOR_1_PIN_PUL,
@@ -12,6 +13,7 @@ SwervePin pins[2] = {{
 
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial,
+    .stepperEngine = &engine,
 }, {
     .stepDir = MOTOR_2_PIN_DIR,
     .stepPul = MOTOR_2_PIN_PUL,
@@ -24,6 +26,7 @@ SwervePin pins[2] = {{
 
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial,
+    .stepperEngine = &engine,
 }};
 wheelPositions wheelPos[2] = {
     wheelPositions(WHEEL_POSITIONS_W/2, WHEEL_POSITIONS_B/2),
@@ -37,17 +40,25 @@ void setup(){
     // Initialize Serial first
     Serial.begin(MONITOR_BAUDRATE);
     delay(500);
-    
     // Initialize encoders sequentially with delays to avoid PCNT ISR conflicts
-    swerve[0]->initSwerveModule();
-    swerve[1]->initSwerveModule();
+    
+    _initswerve();
+    // home(pins[0]);
+    // homingSeq(pins[0], swerve[0]->swerveCtrl->stepper);
+    pins[0].SerialMonitor->println("Type your 'p' command to move.");
     // delay(100);
     delay(100);
 }
 void loop(){
+    swerve[0]->swerveCtrl->stepper->move(20000);
+    swerve[1]->swerveCtrl->stepper->move(20000);
+    Serial.println("Stalling...");
+    while(1);
+    
+    /*
     if (Serial.available()) {
       String data = Serial.readStringUntil('\n');
-      // data.trim();
+      data.trim();
       int inter = data.substring(1).toInt();
       Serial.println("Received from laptop: "+data);
       
@@ -75,5 +86,6 @@ void loop(){
             swerve[i]->driveSwervePose(Pose);
         }
     }
-    delay(5); // delta t = 0.005s
+    */
+    // delay(5); // delta t = 0.005s
 }

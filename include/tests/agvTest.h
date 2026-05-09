@@ -32,7 +32,7 @@ wheelPositions wheelPos[2] = {
 Swerve_module_kinematics *swerve[2] = {new Swerve_module_kinematics(pins[0], wheelPos[0], {0x00}), 
                                        new Swerve_module_kinematics(pins[1], wheelPos[1], {0x00})};
 // Swerve_module_controls *swerve[2] = {new Swerve_module_controls(pins[0]), new Swerve_module_controls(pins[1])};
-ctrlValues ref = {0.0,0.0,0.0,0.0}; // only use posTurn and velDrive
+// ctrlValues ref = {0.0,0.0,0.0,0.0}; // only use posTurn and velDrive
 
 void setup(){
     // Initialize Serial first

@@ -66,7 +66,7 @@ void loop(){
                 swerve[0]->resetVars();
                 break;
             case 'h':
-                swerve[0]->home();
+                // swerve[0]->home();
                 break;
             default:
                 Serial.println("Invalid command");

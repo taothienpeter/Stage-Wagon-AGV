@@ -15,6 +15,9 @@
 
 inline int pos2deg(short deg, short res){return ((deg*res)/360);};
 inline long deg2pos(long pos, short res){return ((pos*360)/res);};
+agvEr home(SwervePin pins);
+agvEr _initswerve();
+agvEr homingSeq(SwervePin pins, FastAccelStepper* stepper);
 class Swerve_module_controls{
     public: // initialization
         /// @brief Constructor for the Swerve_module_controls class.
@@ -29,12 +32,20 @@ class Swerve_module_controls{
         ///          resets encoder, performs homing and clears errors.
         /// @param spd Speed in microseconds per step (lower = faster). Default: 50 µs/step.
         /// @param acc Acceleration in steps per second squared. Default: 10000 steps/s².
-        agvEr initSwerve(short spd = 50, short acc = 10000);
+        agvEr initSwerve(); // engine and outside init
+        agvEr calibStepper(calibState state);
+        agvEr calibBLDC(calibState state); 
         /// @brief Initiates the homing sequence for the swerve module.
         /// @details Calls homingSeq() and calibrates BLDC motor via ODrive.
         ///          Transitions through START, ARM, and READY phases for proper initialization.
-        void home();
         
+        // agvEr home();
+        /// @warning stepper must be initialized before using this function
+        bool isHomeState(){
+            // pins.SerialMonitor->println("stepper");
+            return (!stepper->isRunning() || isHome)? false : true;
+            // return true;
+        }
 
         /// @brief Resets all variables and states to their initial values.
         /// @details Clears errors, resets encoder/stepper positions, optionally performs homing.
@@ -42,12 +53,14 @@ class Swerve_module_controls{
         /// @return agvEr Returns SWERVE_OK on success, or appropriate error code on failure.
         agvEr resetVars(bool needHome = true);
         
-    private:
+        
         static FastAccelStepperEngine engine;
         FastAccelStepper *stepper;
+    private:
         Encoder *Step_enc; // Using a pointer so we can initialize it dynamically
         // ODriveUART *odrive;
         bool _motorNum; // 0 = Front, 1 = Back motor
+        bool isHome;
         SwervePin pins;
         void initInterrupts(){
             attachInterruptArg(digitalPinToInterrupt(pins.encStepA), updateEA, this, CHANGE);
@@ -55,7 +68,8 @@ class Swerve_module_controls{
             attachInterruptArg(digitalPinToInterrupt(pins.encHome), homeNow, this, LOW);
         }
         agvEr homingSeq();
-        
+        agvEr stepperRoughHomeSeq();
+        agvEr stepperTrueHomeSeq();
         void bldc_ReBoot(); // should be public
         /// @brief Clears error flags from the ODrive motor controller.
         /// @details Sends clear error command ("sc") to reset accumulated error states.
@@ -79,16 +93,10 @@ class Swerve_module_controls{
                 instance->Step_enc->triggerB();
             }
         }
-        static void homeNow(void* arg) { 
-            Swerve_module_controls* instance = static_cast<Swerve_module_controls*>(arg);
-            if (instance->stepper->getCurrentPosition() > 0) {
-                instance->stepper->forceStopAndNewPosition(deg2pos(360, MOTOR_MICROSTEPS)); 
-                instance->stepper->moveTo(deg2pos(0, MOTOR_MICROSTEPS));
-            } else if (instance->stepper->getCurrentPosition() < 0) {
-                instance->stepper->forceStopAndNewPosition(0);
-            } else {
-                instance->stepper->setCurrentPosition(deg2pos(0, MOTOR_MICROSTEPS));
-            }
+        static void homeNow(void* arg) {
+            Swerve_module_controls* instance = static_cast<Swerve_module_controls*>(arg); 
+            instance->stepper->forceStopAndNewPosition(0);
+            instance->isHome = !instance->isHome;
         }
     public: // setting swerve function
                
@@ -219,14 +227,16 @@ inline double wrapAngle(double a) {
 class Swerve_module_kinematics{
     public:
         Swerve_module_kinematics(const SwervePin& pins, wheelPositions wheelPos = wheelPositions(), isClockWise isCW = {0x00});
+        agvEr calibSwerve(calibState state);
         agvEr initSwerveModule();   
         /// @brief 
         void getInfo_Serialprint();
         agvEr resetVars();
         agvEr driveSwervePose(pose& pose); // control using next pose
         agvEr driveSwerveVel(vel& vel); // control usign velocity
-    private:
         Swerve_module_controls *swerveCtrl;     
+    private:
+        // FastAccelStepperEngine engine;
         SwervePin pins;
         wheelPositions wP;
         wheelState wS;

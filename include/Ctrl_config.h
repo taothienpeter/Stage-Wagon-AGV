@@ -21,8 +21,8 @@
 #define ENC_STEPPER_2A 5
 #define ENC_STEPPER_2B 4
 
-#define ENC_STEPPER_1HOME 35
-#define ENC_STEPPER_2HOME 34
+#define ENC_STEPPER_1HOME 34
+#define ENC_STEPPER_2HOME 35
 
 #define ENC_BLDC_TPR (2.5*4*600) // BLDC encoder's ticks per revolution 
 #define ENC_STEP_TPR (2.5*4*600) // Stepper encoder's ticks per direction of swerve revolution 
@@ -63,11 +63,17 @@
 // #define STEPPER_MOTOR_ACCELERATION_RPM      10         // rpm/s
 // #define MAX_STEPPER_MOTOR_SPEED_RPM         120        // rpm
 
-#define ODRIVE_TX 16
-#define ODRIVE_RX 17
+#define ODRIVE_TX 17
+#define ODRIVE_RX 16
 #define ODRIVE_BAUD ODRIVE_BAUDRATE // 115200  
 
 #define ODRIVE_CONFIG
 // Controller config
 
 #define PROCESS_DELTA_T 0.05
+
+#define ESP_MOSI 23
+#define ESP_MISO 19
+#define ESP_SCLK 18
+// #define ESP_SS   5  // intercept with encoder
+#define SPICLK_SPEED 10000000
