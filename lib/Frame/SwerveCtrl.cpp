@@ -8,37 +8,34 @@ Swerve_module_controls::Swerve_module_controls(const SwervePin pins, isClockWise
 }
 agvEr Swerve_module_controls::calibStepper(calibState state){   
     switch (state){
-    case stepCW:  
-    // Create encoder if not already created (happens only once per module)
-        // pins.SerialMonitor->println("pins: "+(String)pins.encStepA + (String)pins.encStepB);
-        Step_enc = new Encoder(pins.encStepA, pins.encStepB, false);
-        Step_enc->reset();
-        // pins.SerialMonitor->println("init encoder" + (String)_motorNum);
-    this->initInterrupts();
-     // Create stepper if not already created
-        stepper = pins.stepperEngine->stepperConnectToPin(pins.stepPul);
-        stepper->setDirectionPin(pins.stepDir);
-        stepper->setAutoEnable(true);
-        stepper->setSpeedInUs(100);
-        stepper->setAcceleration(10000);
-        // delay(200);
+        case stepCW:  
+        // Create encoder if not already created (happens only once per module)
+            Step_enc = new Encoder(pins.encStepA, pins.encStepB, false);
+            Step_enc->reset();
+            // pins.SerialMonitor->println("init encoder" + (String)_motorNum);
+            this->initInterrupts();
+            stepper = pins.stepperEngine->stepperConnectToPin(pins.stepPul);
+            stepper->setDirectionPin(pins.stepDir);
+            stepper->setAutoEnable(true);
+            stepper->setSpeedInUs(20);
+            stepper->setAcceleration(20000);
         // find home first
-        isHome = false;
-    // stepper moves 180 and -180 to find home automatically
-        stepper->forceStopAndNewPosition(0);
-        stepper->moveTo(deg2pos(180,MOTOR_MICROSTEPS));
-        pins.SerialMonitor->println("homing motor" + (String)_motorNum);
-        break;
-    case stepCCW:
-        if(isHome)Serial.print("home found");
-        if(!isHome) stepper->moveTo(deg2pos(-180,MOTOR_MICROSTEPS));
-        break;
-    case stepTruehome:
-        if(isHome)Serial.print("home found");
-        if(stepper->getCurrentPosition()>180) {stepper->forceStopAndNewPosition(deg2pos(180+3,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
-        else if (stepper->getCurrentPosition()<-180) {stepper->forceStopAndNewPosition(0);}
-        else {stepper->setCurrentPosition(deg2pos(0,MOTOR_MICROSTEPS));}
-        break;
+            isHome = false;
+        // stepper moves 180 and -180 to find home automatically
+            stepper->forceStopAndNewPosition(0);
+            stepper->moveTo(deg2pos(180,MOTOR_MICROSTEPS));
+            pins.SerialMonitor->println("Calibrating STEPPER ...");
+            break;
+        case stepCCW:
+            if(isHome)Serial.print("home found");
+            if(!isHome) stepper->moveTo(deg2pos(-180,MOTOR_MICROSTEPS));
+            break;
+        case stepTruehome:
+            if(isHome)Serial.print("home found");
+            if(stepper->getCurrentPosition()>180) {stepper->forceStopAndNewPosition(deg2pos(180+3,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
+            else if (stepper->getCurrentPosition()<-180) {stepper->forceStopAndNewPosition(0);}
+            else {stepper->setCurrentPosition(deg2pos(0,MOTOR_MICROSTEPS));}
+            break;
     }
     return SWERVE_INFO_HOME;
 }

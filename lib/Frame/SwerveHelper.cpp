@@ -29,45 +29,35 @@ agvEr home(SwervePin pins){
     return SWERVE_INFO_HOME;
 };
 agvEr _initswerve(){
-    u_int16_t sT = millis(); // start time
-    // Calibrate BLDC motors
+    // initSwerveModule();
     swerve[0]->initSwerveModule();
+    // calib swerve
     Serial.println("Homing sequence started");
+    u_int16_t sT = millis(); // start time
     u_int16_t eT = 5000; // elapsed time
-    calibState bldcState = bldcMotor;
-    swerve[0]->calibSwerve(bldcState);
-    swerve[1]->calibSwerve(bldcState);
-    while(eT != 0) {
-        if(eT < (millis() - sT)) {
+    calibState stepperState[2] = {stepCW, stepCW}, bldcState = bldcMotor;
+    swerve[0]->calibSwerve(bldcMotor);
+    swerve[1]->calibSwerve(bldcMotor);
+    swerve[0]->calibSwerve(stepCW); // inlucded all the init of stepper
+    swerve[1]->calibSwerve(stepCW); 
+    while(eT != 0)
+    {
+        // if (seT < (millis() - sT) && seT != 0){
+        for(int i = 0; i<2; i++){
+            if(!swerve[i]->swerveCtrl->stepper->isRunning()) {
+                if (stepperState[i] != stepTruehome) stepperState[i] = static_cast<calibState>(stepperState[i] + 1);
+                swerve[i]->calibSwerve(stepperState[i]); 
+            } 
+        }
+        // }
+        if(eT <  (millis() - sT)){
             if (bldcState != bldcArmed) bldcState = static_cast<calibState>(bldcState + 1);
             swerve[0]->calibSwerve(bldcState);
             swerve[1]->calibSwerve(bldcState);
-
-            if((millis() - sT) > 15000) { eT = 0; }
-            else if((millis() - sT) > 5000) { eT = 15000; }
+            if((millis() - sT)>15000) {eT = 0;}
+            else if((millis() - sT)>5000){eT = 15000;}
         }
-    }
-
-    // Calibrate stepper motors
-    sT = millis();
-    u_int16_t seT = 2500;
-    calibState stepperState[2] = {stepCW, stepCW};
-    swerve[0]->calibSwerve(stepperState[0]);
-    swerve[1]->calibSwerve(stepperState[1]);
-    while(seT != 0) {
-        if (seT < (millis() - sT) && seT != 0) {
-            for(int i = 0; i < 2; i++) {
-                if(!swerve[i]->swerveCtrl->stepper->isRunning()) {
-                    if (stepperState[i] != stepTruehome) stepperState[i] = static_cast<calibState>(stepperState[i] + 1);
-                    Serial.println("Calibrating STEPPER" + (String)stepperState[i]);
-                    swerve[i]->calibSwerve(stepperState[i]);
-
-                    if((millis() - sT) > 5000) { seT = 0; }
-                    else if((millis() - sT) > 2500) { seT = 5000; }
-                }
-            }
-        }
-    }
+    }    
     return SWERVE_OK;
 };
 agvEr homingSeq(SwervePin pins, FastAccelStepper* stepper){ 

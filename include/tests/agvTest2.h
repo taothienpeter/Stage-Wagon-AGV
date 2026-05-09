@@ -34,28 +34,14 @@ wheelPositions wheelPos[2] = {
 };
 Swerve_module_kinematics *swerve[2] = {new Swerve_module_kinematics(pins[0], wheelPos[0], {0x00}), 
                                        new Swerve_module_kinematics(pins[1], wheelPos[1], {0x00})};
-// Swerve_module_controls *swerve[2] = {new Swerve_module_controls(pins[0]), new Swerve_module_controls(pins[1])};
 pose Pose = {0, 0, 0};
 void setup(){
-    // Initialize Serial first
-    Serial.begin(MONITOR_BAUDRATE);
-    delay(500);
-    // Initialize encoders sequentially with delays to avoid PCNT ISR conflicts
-    
     _initswerve();
-    // home(pins[0]);
-    // homingSeq(pins[0], swerve[0]->swerveCtrl->stepper);
-    pins[0].SerialMonitor->println("Type your 'p' command to move.");
-    // delay(100);
-    delay(100);
+    // Serial.println("Stalling...");
+    // while(1);
 }
-void loop(){
-    swerve[0]->swerveCtrl->stepper->move(20000);
-    swerve[1]->swerveCtrl->stepper->move(20000);
-    Serial.println("Stalling...");
-    while(1);
+void loop(){    
     
-    /*
     if (Serial.available()) {
       String data = Serial.readStringUntil('\n');
       data.trim();
@@ -86,6 +72,6 @@ void loop(){
             swerve[i]->driveSwervePose(Pose);
         }
     }
-    */
-    // delay(5); // delta t = 0.005s
+    
+    delay(5); // delta t = 0.005s
 }

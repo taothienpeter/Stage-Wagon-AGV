@@ -13,8 +13,8 @@
 ///             second device's code:       1 for Encoders, 2 for Steppers, 3 for Home sens, 4 for BLDCs, 5 for UWBs, 6 for IMU, 7 for Battery
 ///             third device's number   
 
-inline int pos2deg(short deg, short res){return ((deg*res)/360);};
-inline long deg2pos(long pos, short res){return ((pos*360)/res);};
+inline int pos2deg(long pos, short res){return ((pos*360)/res);};
+inline long deg2pos(short deg, short res){return ((deg*res)/360);};
 agvEr home(SwervePin pins);
 agvEr _initswerve();
 agvEr homingSeq(SwervePin pins, FastAccelStepper* stepper);
@@ -65,7 +65,7 @@ class Swerve_module_controls{
         void initInterrupts(){
             attachInterruptArg(digitalPinToInterrupt(pins.encStepA), updateEA, this, CHANGE);
             attachInterruptArg(digitalPinToInterrupt(pins.encStepB), updateEB, this, CHANGE);
-            attachInterruptArg(digitalPinToInterrupt(pins.encHome), homeNow, this, LOW);
+            // attachInterruptArg(digitalPinToInterrupt(pins.encHome), homeNow, this, CHANGE);
         }
         agvEr homingSeq();
         agvEr stepperRoughHomeSeq();

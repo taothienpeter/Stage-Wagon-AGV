@@ -82,15 +82,16 @@ void setup(){
     stepper_1_encoder.reset();
     attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1A), updateE1A, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1B), updateE1B, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1HOME), sethome, CHANGE);
+    // attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1HOME), sethome, CHANGE);
 
     engine.init();
-    stepper = engine.stepperConnectToPin(MOTOR_2_PIN_PUL);
-    stepper->setDirectionPin(MOTOR_2_PIN_DIR);
-    stepper->setEnablePin(enablePinStepper); 
+    stepper = engine.stepperConnectToPin(MOTOR_1_PIN_PUL);
+    stepper->setDirectionPin(MOTOR_1_PIN_DIR);
     
     stepper->setSpeedInUs(20);
     stepper->setAcceleration(20000);
+    // test this for ensur
+    stepper->runForward();
 }
 void loop(){
     if (Serial.available()) {
