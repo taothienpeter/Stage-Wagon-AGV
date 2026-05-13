@@ -27,7 +27,7 @@ SwervePin pins[2] = {{
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial,
     .stepperEngine = &engine,
-}};
+}}; 
 wheelPositions wheelPos[2] = {
     wheelPositions(WHEEL_POSITIONS_W/2, WHEEL_POSITIONS_B/2),
     wheelPositions(-WHEEL_POSITIONS_W/2, -WHEEL_POSITIONS_B/2)
@@ -49,16 +49,16 @@ void loop(){
       Serial.println("Received from laptop: "+data);
       
         switch(data[0]){
-            case 'n':
+            case 'd':
                 Pose = {1, 0};
                 break;
-            case 'w':
+            case 's':
                 Pose = {0, -1};
                 break;
-            case 's':
+            case 'a':
                 Pose = {-1, 0};
                 break;
-            case 'e':
+            case 'w':
                 Pose = {0, 1};
                 break;
             case 'r':
@@ -68,10 +68,11 @@ void loop(){
                 Serial.println("Invalid command");
                 break;
         }
-        for (short i=0; i<2; i++){
-            swerve[i]->driveSwervePose(Pose);
-        }
+        
     }
-    
+    // for (short i=0; i<2; i++){
+    //         swerve[i]->driveSwervePose(Pose);
+    // }
+    Serial.println("Pose: "+ (String)Pose.x + " " + (String)Pose.y + " " + (String)Pose.theta);
     delay(5); // delta t = 0.005s
 }

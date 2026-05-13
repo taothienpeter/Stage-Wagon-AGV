@@ -2,32 +2,6 @@
 #include "FrameEnum.h"
 
 extern Swerve_module_kinematics* swerve[2];
-
-agvEr home(SwervePin pins){
-    // if (homingSeq(pins, engine) == SWERVE_ERROR_NO_HOME_DETECTED) pins.SerialMonitor->println("Dir motor no home pins, next for BLDC");
-    // if (engineInitialized) {
-    // reset bldc parrameters
-    pins.SerialMonitor->println("Calibrating MOTOR ...");
-    pins.SerialOdr->print("w axis0.requested_state 4\n");
-    pins.SerialOdr->print("w axis1.requested_state 4\n");
-    pins.SerialOdr->print("r axis0.error\n");
-    // State = ARM;
-    delay(5000);
-    pins.SerialMonitor->println("Calibrating ENCODER ...");
-    pins.SerialOdr->print("w axis0.requested_state 7\n");
-    pins.SerialOdr->print("w axis1.requested_state 7\n");
-    pins.SerialOdr->print("r axis0.error\n");
-    // State = READY;
-    delay(10000);
-    pins.SerialOdr->print("w axis0.controller.input_pos 0\n"); // Zero position target
-    pins.SerialOdr->print("w axis1.controller.input_pos 0\n");
-    pins.SerialOdr->print("w axis0.requested_state 8\n"); // Arm
-    pins.SerialOdr->print("w axis1.requested_state 8\n");
-    pins.SerialMonitor->println("ARMED! Motor is holding.");
-    pins.SerialOdr->print("r axis0.error\n");
-    // }
-    return SWERVE_INFO_HOME;
-};
 agvEr _initswerve(){
     // initSwerveModule();
     swerve[0]->initSwerveModule();
@@ -60,9 +34,35 @@ agvEr _initswerve(){
     }    
     return SWERVE_OK;
 };
-agvEr homingSeq(SwervePin pins, FastAccelStepper* stepper){ 
-    return SWERVE_INFO_HOME;
-}
+// agvEr home(SwervePin pins){
+//     // if (homingSeq(pins, engine) == SWERVE_ERROR_NO_HOME_DETECTED) pins.SerialMonitor->println("Dir motor no home pins, next for BLDC");
+//     // if (engineInitialized) {
+//     // reset bldc parrameters
+//     pins.SerialMonitor->println("Calibrating MOTOR ...");
+//     pins.SerialOdr->print("w axis0.requested_state 4\n");
+//     pins.SerialOdr->print("w axis1.requested_state 4\n");
+//     pins.SerialOdr->print("r axis0.error\n");
+//     // State = ARM;
+//     delay(5000);
+//     pins.SerialMonitor->println("Calibrating ENCODER ...");
+//     pins.SerialOdr->print("w axis0.requested_state 7\n");
+//     pins.SerialOdr->print("w axis1.requested_state 7\n");
+//     pins.SerialOdr->print("r axis0.error\n");
+//     // State = READY;
+//     delay(10000);
+//     pins.SerialOdr->print("w axis0.controller.input_pos 0\n"); // Zero position target
+//     pins.SerialOdr->print("w axis1.controller.input_pos 0\n");
+//     pins.SerialOdr->print("w axis0.requested_state 8\n"); // Arm
+//     pins.SerialOdr->print("w axis1.requested_state 8\n");
+//     pins.SerialMonitor->println("ARMED! Motor is holding.");
+//     pins.SerialOdr->print("r axis0.error\n");
+//     // }
+//     return SWERVE_INFO_HOME;
+// };
+
+// agvEr homingSeq(SwervePin pins, FastAccelStepper* stepper){ 
+//     return SWERVE_INFO_HOME;
+// }
 
 // agvEr Swerve_module_controls::stepperRoughHomeSeq(){
 //     pins.SerialMonitor->println("Homing sequence started");

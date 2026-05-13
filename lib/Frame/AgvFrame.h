@@ -56,10 +56,10 @@ class Swerve_module_controls{
         
         static FastAccelStepperEngine engine;
         FastAccelStepper *stepper;
+        bool _motorNum; // 0 = Front, 1 = Back motor
     private:
         Encoder *Step_enc; // Using a pointer so we can initialize it dynamically
         // ODriveUART *odrive;
-        bool _motorNum; // 0 = Front, 1 = Back motor
         bool isHome;
         SwervePin pins;
         void initInterrupts(){

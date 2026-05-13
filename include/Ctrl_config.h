@@ -21,8 +21,8 @@
 #define ENC_STEPPER_2A 5
 #define ENC_STEPPER_2B 4
 
-#define ENC_STEPPER_1HOME 34
-#define ENC_STEPPER_2HOME 35
+#define ENC_STEPPER_1HOME 35
+#define ENC_STEPPER_2HOME 34
 
 #define ENC_BLDC_TPR (2.5*4*600) // BLDC encoder's ticks per revolution 
 #define ENC_STEP_TPR (2.5*4*600) // Stepper encoder's ticks per direction of swerve revolution 

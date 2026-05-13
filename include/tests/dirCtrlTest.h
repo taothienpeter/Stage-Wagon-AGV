@@ -5,7 +5,7 @@
 FastAccelStepperEngine engine = FastAccelStepperEngine();
 FastAccelStepper *stepper = NULL;
 short calib = 0;
-Encoder stepper_1_encoder(ENC_STEPPER_1A, ENC_STEPPER_1B, false);
+Encoder stepper_1_encoder(ENC_STEPPER_2A, ENC_STEPPER_2B, false);
 bool isHome = false;
 long deg2pos(int deg, int res){return ((deg*res)/360);}
 int pos2deg(long pos, int res){return ((pos*360)/res);}
@@ -13,11 +13,10 @@ int pos2deg(long pos, int res){return ((pos*360)/res);}
 void updateE1A() { stepper_1_encoder.triggerA(); }
 void updateE1B() { stepper_1_encoder.triggerB(); }
 void sethome() {
-  // Serial.println("Home detected! & Done homing");
-  // if(!digitalRead(ENC_STEPPER_1HOME)) 
-  stepper->forceStopAndNewPosition(0);
-  isHome = !isHome;
-  // if(calib>0) calib = stepper->getCurrentPosition()-1;
+  // stepper->forceStopAndNewPosition(0);
+  // stepper->stopMove();
+  // stepper->setPositionAfterCommandsCompleted(0);
+  digitalRead(ENC_STEPPER_2HOME)? isHome = false: isHome = true;
 }
 void homingSeq(){
   Serial.println("Homing...");
@@ -55,13 +54,25 @@ void homingSeq2(){
   stepper->forceStopAndNewPosition(0);
   // find home first
   stepper->moveTo(deg2pos(180,MOTOR_MICROSTEPS));
-  delay(2000); // replace with while loop to remove delay
-  if(isHome)Serial.print("home found");
-  else{
-  stepper->moveTo(deg2pos(-180,MOTOR_MICROSTEPS));
-  delay(2000);
-  if(isHome)Serial.print("home found");
+  while(!isHome &&stepper->isRunning()); // replace with while loop to remove delay
+  if(isHome){
+    Serial.print("home found");
+    stepper->setSpeedInUs(200);
+    stepper->setAcceleration(1000);
+    stepper->moveTo(deg2pos(20,MOTOR_MICROSTEPS));
   }
+  else{
+    stepper->moveTo(deg2pos(-180,MOTOR_MICROSTEPS));
+    while(!isHome &&stepper->isRunning());
+    if(isHome){
+      Serial.print("home found");
+      stepper->setSpeedInUs(200);
+      stepper->setAcceleration(1000);
+      stepper->moveTo(deg2pos(-20,MOTOR_MICROSTEPS));
+    }
+
+  }
+
   // find true home
   /*
   // calib = stepper->getCurrentPosition()+1;
@@ -71,27 +82,28 @@ void homingSeq2(){
   // while(!isHome) {calib = stepper->getCurrentPosition()-1;} 
   // Serial.print(calib);
   // stepper->move(-calib/2);
-  */
-  if(stepper->getCurrentPosition()>180) {stepper->forceStopAndNewPosition(deg2pos(180+3,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
-  else if (stepper->getCurrentPosition()<-180) {stepper->forceStopAndNewPosition(0);}
-  else {stepper->setCurrentPosition(deg2pos(0,MOTOR_MICROSTEPS));}
-
+  */  
+  if(stepper->getCurrentPosition()>180) {stepper->setPositionAfterCommandsCompleted(deg2pos(180,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
+  else if (stepper->getCurrentPosition()<-180) {stepper->setPositionAfterCommandsCompleted(deg2pos(-175,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
+  else {stepper->setPositionAfterCommandsCompleted(deg2pos(0,MOTOR_MICROSTEPS));}
+  stepper->setSpeedInUs(100);
+  stepper->setAcceleration(10000);
 }
 void setup(){
     Serial.begin(9600);
     stepper_1_encoder.reset();
-    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1A), updateE1A, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1B), updateE1B, CHANGE);
-    // attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_1HOME), sethome, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_2A), updateE1A, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_2B), updateE1B, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENC_STEPPER_2HOME), sethome, CHANGE);
 
     engine.init();
-    stepper = engine.stepperConnectToPin(MOTOR_1_PIN_PUL);
-    stepper->setDirectionPin(MOTOR_1_PIN_DIR);
+    stepper = engine.stepperConnectToPin(MOTOR_2_PIN_PUL);
+    stepper->setDirectionPin(MOTOR_2_PIN_DIR);
     
-    stepper->setSpeedInUs(20);
-    stepper->setAcceleration(20000);
+    stepper->setSpeedInUs(100);
+    stepper->setAcceleration(10000);
     // test this for ensur
-    stepper->runForward();
+    // stepper->runForward();
 }
 void loop(){
     if (Serial.available()) {
@@ -107,11 +119,11 @@ void loop(){
     if (data[0] == 'h') homingSeq2();
     } 
     if (stepper && stepper->isRunning()) {
-      Serial.println("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getAngle());
+      Serial.println("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getAngle() + "\t Ticks: " +(String)stepper_1_encoder.getTicks());
       // if(digitalRead(14)){Serial.println("Not homing");} 
       // else {updateH1();};
     } else {
-      Serial.print("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getTicks());
+      Serial.print("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getAngle() + "\t Ticks: " +(String)stepper_1_encoder.getTicks());
       Serial.println(" All moves completed!");
       while (!Serial.available()) {
         // Serial.println("Position: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + " \tEncoder: " + (String)stepper_1_encoder.getTicks());

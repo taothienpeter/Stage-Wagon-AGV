@@ -26,7 +26,7 @@ agvEr Swerve_module_kinematics::resetVars(){
     return swerveCtrl->resetVars();
 }; // calling homeNow() will call home() for all swerve modules
 agvEr Swerve_module_kinematics::driveSwervePose(pose& pose){
-    if(this->computeVelocity(prePose, pose, ref)==AGV_INFO_COMPUTE_FRAMEVELO) pins.SerialMonitor->print("ve");
+    if(this->computeVelocity(prePose, pose, ref)==AGV_INFO_COMPUTE_FRAMEVELO) pins.SerialMonitor->print("ok");
     this->driveSwerveVel(ref);
     prePose = pose;
     return AGV_INFO_DRIVE_FRAMEVELO;
@@ -35,6 +35,7 @@ agvEr Swerve_module_kinematics::driveSwerveVel(vel& vel){
     wS = this->computeWheel(vel, swerveCtrl->getDirectionPosition(degree));
     swerveCtrl->runTurnAngle(wS.angle);
     swerveCtrl->runDriveSpeed(wS.speed);  // check for type of controller
+    pins.SerialMonitor->print("\tM"+ (String)swerveCtrl->_motorNum +":\tangle: " + (String)(wS.angle*(360/(2*PI))) + "\tspeed "+ (String)wS.speed);
     return AGV_INFO_COMPUTE_WHEELSTATE;
 }
 agvEr Swerve_module_kinematics::computeVelocity(pose current, pose target, vel& ref){

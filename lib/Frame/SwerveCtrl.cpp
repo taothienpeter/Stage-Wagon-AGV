@@ -32,8 +32,9 @@ agvEr Swerve_module_controls::calibStepper(calibState state){
             break;
         case stepTruehome:
             if(isHome)Serial.print("home found");
+            // recheck for this case since the logic is not verified
             if(stepper->getCurrentPosition()>180) {stepper->forceStopAndNewPosition(deg2pos(180+3,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
-            else if (stepper->getCurrentPosition()<-180) {stepper->forceStopAndNewPosition(0);}
+            else if (stepper->getCurrentPosition()<-180) {stepper->forceStopAndNewPosition(deg2pos(-3,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
             else {stepper->setCurrentPosition(deg2pos(0,MOTOR_MICROSTEPS));}
             break;
     }
