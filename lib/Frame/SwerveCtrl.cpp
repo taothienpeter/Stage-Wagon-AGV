@@ -2,9 +2,25 @@
 
 Swerve_module_controls::Swerve_module_controls(const SwervePin pins, isClockWise isCW): pins(pins){
     // Defer encoder creation to initSwerve to prevent multiple PCNT ISR installations
+    pins.SerialMonitor->begin(MONITOR_BAUDRATE);
+    pins.SerialOdr->begin(ODRIVE_BAUD, SERIAL_8N1, ODRIVE_RX, ODRIVE_TX);
     stepper = NULL;
     Step_enc = NULL;
     _motorNum = pins.MotorNum;
+    settings = {CONFIG_STEPPER_UNIT, CONFIG_BLDC_UNIT, CONFIG_STEPPER_SPEED, CONFIG_STEPPER_ACCEL, 
+        CONFIG_BLDC_SPEED, CONFIG_BLDC_ACCEL_MAX, CONFIG_BLDC_ACCEL_MIN, isCW}; // preset controller
+    pins.stepperEngine->init();
+}
+agvEr Swerve_module_controls::initSwerve(){
+    stepper = pins.stepperEngine->stepperConnectToPin(pins.stepPul);
+    stepper->setDirectionPin(pins.stepDir);
+    stepper->setAutoEnable(true);
+    stepper->setSpeedInUs(settings.stepperSpeed);
+    stepper->setAcceleration(settings.stepperAccel);
+    // find home first
+    isHome = false;
+    stepper->forceStopAndNewPosition(0);
+    return SWERVE_INFO_INIT;
 }
 agvEr Swerve_module_controls::calibStepper(calibState state){   
     switch (state){
@@ -12,19 +28,11 @@ agvEr Swerve_module_controls::calibStepper(calibState state){
         // Create encoder if not already created (happens only once per module)
             Step_enc = new Encoder(pins.encStepA, pins.encStepB, false);
             Step_enc->reset();
-            // pins.SerialMonitor->println("init encoder" + (String)_motorNum);
             this->initInterrupts();
-            stepper = pins.stepperEngine->stepperConnectToPin(pins.stepPul);
-            stepper->setDirectionPin(pins.stepDir);
-            stepper->setAutoEnable(true);
-            stepper->setSpeedInUs(20);
-            stepper->setAcceleration(20000);
-        // find home first
-            isHome = false;
-        // stepper moves 180 and -180 to find home automatically
-            stepper->forceStopAndNewPosition(0);
+            this->initSwerve();
             stepper->moveTo(deg2pos(180,MOTOR_MICROSTEPS));
             pins.SerialMonitor->println("Calibrating STEPPER ...");
+            // stepper moves 180 and -180 to find home automatically
             break;
         case stepCCW:
             if(isHome)Serial.print("home found");
@@ -32,7 +40,6 @@ agvEr Swerve_module_controls::calibStepper(calibState state){
             break;
         case stepTruehome:
             if(isHome)Serial.print("home found");
-            // recheck for this case since the logic is not verified
             if(stepper->getCurrentPosition()>180) {stepper->forceStopAndNewPosition(deg2pos(180+3,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
             else if (stepper->getCurrentPosition()<-180) {stepper->forceStopAndNewPosition(deg2pos(-3,MOTOR_MICROSTEPS)); stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
             else {stepper->setCurrentPosition(deg2pos(0,MOTOR_MICROSTEPS));}
@@ -43,56 +50,52 @@ agvEr Swerve_module_controls::calibStepper(calibState state){
 agvEr Swerve_module_controls::calibBLDC(calibState state){
     switch(state){
     case bldcMotor:
-    // BLDC calib
         pins.SerialMonitor->println("Calibrating BLDC MOTOR ...");
         pins.SerialOdr->print("w axis" + (String)_motorNum +".requested_state 4\n");
-        // pins.SerialOdr->print("w axis1.requested_state 4\n");
         pins.SerialOdr->print("r axis"+ (String)_motorNum +".error\n");
-        // State = ARM;
         break;
     case bldcEncoder:
         pins.SerialMonitor->println("Calibrating BLDC ENCODER ...");
         pins.SerialOdr->print("w axis"+ (String)_motorNum +".requested_state 7\n");
-        // pins.SerialOdr->print("w axis1.requested_state 7\n");
         pins.SerialOdr->print("r axis"+ (String)_motorNum +".error\n");
-        // State = READY;
         break;
     case bldcArmed:
-        pins.SerialOdr->print("w axis"+ (String)_motorNum +".controller.input_pos 0\n"); // Zero position target
-        // pins.SerialOdr->print("w axis1.controller.input_pos 0\n");
-        pins.SerialOdr->print("w axis"+ (String)_motorNum +".requested_state 8\n"); // Arm
         // pins.SerialOdr->print("w axis1.requested_state 8\n");
+        pins.SerialOdr->print("w axis"+ (String)_motorNum +".controller.input_pos 0\n"); // Zero position target
+        pins.SerialOdr->print("w axis"+ (String)_motorNum +".requested_state 8\n"); // Arm
         pins.SerialOdr->print("r axis"+ (String)_motorNum +".error\n");
         pins.SerialMonitor->println("ARMED! Motor is holding.");
         break;
     }
     return SWERVE_OK;
 }
-agvEr Swerve_module_controls::initSwerve(){
-    pins.SerialMonitor->begin(MONITOR_BAUDRATE);
-    pins.SerialOdr->begin(ODRIVE_BAUD, SERIAL_8N1, ODRIVE_RX, ODRIVE_TX);
-    pins.stepperEngine->init();
-    pins.SerialMonitor->println("init swerve");
-    
-    
-    return SWERVE_INFO_INIT;
-}
-agvEr Swerve_module_controls::homingSeq(){
-    if(stepper->getCurrentPosition()>180) {
-       stepper->forceStopAndNewPosition(deg2pos(360,MOTOR_MICROSTEPS)); 
-       stepper->moveTo(deg2pos(0,MOTOR_MICROSTEPS));}
-    else if (stepper->getCurrentPosition()<180) {
-        stepper->forceStopAndNewPosition(0);
-    }
-    else {stepper->setCurrentPosition(deg2pos(0,MOTOR_MICROSTEPS));};
-    return SWERVE_OK;
-}
 agvEr Swerve_module_controls::resetVars(bool needHome){ 
-    // if(needHome) {this->home();}else{ stepper->forceStopAndNewPosition(0);};
     this->bldc_clcEr();
     this->setDriveAbsolutePos(0);
     Step_enc->reset();
     return SWERVE_INFO_RESET;
+}
+agvEr Swerve_module_controls::ctrlSS(wheelState setState){
+    // input speed and angle are m/s and rad 
+    if (fabs(setState.speed) < JITTER_PERCENTAGE) {
+        setState.speed = 0;
+        return SWERVE_OK; // skip to prevent jitter
+    }
+    // optimize turn angle
+    double delta = wrapAngle(setState.angle - (this->getTurnStepperPos()*DEG_TO_RAD));
+    if (delta > HALF_PI) {
+        setState.angle -= PI;
+        setState.speed *= -1;
+    }else if(delta < -HALF_PI){
+        setState.angle += PI;
+        setState.speed *= -1;
+    }
+    setState.angle = wrapAngle(setState.angle);
+    // setState.speed *= cos(delta);
+    this->runTurnAngle(setState.angle*RAD_TO_DEG);
+    this->runDriveSpeed(setState.speed);
+    pins.SerialMonitor->println("driving:"+ (String)setState.speed+"\t"+(String)(setState.angle*RAD_TO_DEG));
+    return SWERVE_OK;
 }
 void Swerve_module_controls::bldc_ReBoot(){ 
     pins.SerialOdr->print("sr\n");
@@ -125,12 +128,12 @@ agvEr Swerve_module_controls::bldc_sendCmd(String msg){
 // call this function once to go to the desired position
 agvEr Swerve_module_controls::runTurnAngle(double angle){ 
     // if (!this->checkStepSkiping()) return SWERVE_ERROR_STEP_MISSMATCH;
+    
     stepper->moveTo(deg2pos(angle, MOTOR_MICROSTEPS));
-    if (!this->checkStepSkiping()) return SWERVE_ERROR_STEP_MISSMATCH;
     return SWERVE_OK;
 }
-agvEr Swerve_module_controls::setTurnSpeed(double speed, unit u){ 
-    switch (u) {
+agvEr Swerve_module_controls::setTurnSpeed(double speed){ 
+    switch (settings.unitTurn) {
         case Hz:
             stepper->setSpeedInHz(speed);
             break;
@@ -146,8 +149,8 @@ agvEr Swerve_module_controls::setTurnSpeed(double speed, unit u){
     };
     return SWERVE_OK;
 }
-agvEr Swerve_module_controls::setTurnAccel(int16_t step_s_s){
-    stepper->setAcceleration(step_s_s);
+agvEr Swerve_module_controls::setTurnAccel(int16_t accel){
+    stepper->setAcceleration(accel);
     return SWERVE_OK;
 }
 agvEr Swerve_module_controls::runDriveSpeed(double turns){
@@ -167,74 +170,38 @@ agvEr Swerve_module_controls::runDriveDistance(double turns){
 agvEr Swerve_module_controls::setDriveTorque(uint8_t torque){
     return this->bldc_sendCmd("c " + (String)_motorNum + " " + (String)torque + " 0 )");
 }
-double Swerve_module_controls::getDirectionEncoderPos(unit u){
-    return u==degree? Step_enc->getAngle() : Step_enc->getTicks();
+double Swerve_module_controls::getTurnEncoderPos(){
+    return Step_enc->getAngle();
 }
-#ifndef temp
-double Swerve_module_controls::getDirectionEncoderPos_UnitOne(){
-    return this->getDirectionEncoderPos(degree)/360;ref.velx * sin(pose.theta) + ref.vely * cos(pose.theta)
+double Swerve_module_controls::getTurnStepperPos(){
+    return pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS);
 }
-#endif
-#ifndef temp
-double Swerve_module_controls::getDirectionEncoderVelo(float dt, unit u){
-    // if(u==radian) return Step_enc->getAngle()*DEG_TO_RAD / dt;
-    // return u==degree? Step_enc->getAngle() / dt : Step_enc->getTicks() / dt;
-    pins.SerialMonitor->print("Sorry this function is not implemented yet");
-    return 0.0;
-}
-#endif
-#ifndef temp
-double Swerve_module_controls::getDirectionEncoderVelo_UnitOne(float dt){
-    // return this->getDirectionEncoderPos_UnitOne() / dt;
-    pins.SerialMonitor->print("Sorry this function is not implemented yet");
-    return 0.0;
-}
-#endif
-//   Get direction position
-long Swerve_module_controls::getDirectionPosition(unit u){
-    return u==degree? pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS):  stepper->getCurrentPosition();
-}
-#ifndef temp
-double Swerve_module_controls::getDirectionPosition_UnitOne(){ 
-    return this->getDirectionPosition(degree)/360;
-}
-#endif
-double Swerve_module_controls::getDirectionVelocity(unit u){
-    return u==degree? pos2deg(stepper->getSpeedInTicks(),MOTOR_MICROSTEPS) : stepper->getSpeedInTicks();
-}
-#ifndef temp
-double Swerve_module_controls::getDirectionVelocity_UnitOne(){ 
-    return this->getDirectionVelocity(degree)/360;   
-}
-#endif
-bool Swerve_module_controls::checkStepSkiping(){
-    return (abs(this->getDirectionEncoderPos(degree)/this->getDirectionPosition(degree))<0.005)?true: false;
-}
-float Swerve_module_controls::getWheelPosition(){
+// double Swerve_module_controls::getDirectionStepperVel(unit u){
+//     return u==degree? pos2deg(stepper->getSpeedInTicks(),MOTOR_MICROSTEPS) : stepper->getSpeedInTicks();
+// }
+
+float Swerve_module_controls::getDriveBldcPos(){
     if(this->bldc_sendCmd("r "+(String)_motorNum+".controller.input_pos")!=SWERVE_OK) return 0;
     return this->parseWheelVar(pins.SerialOdr->readString());
 }
-float Swerve_module_controls::getWheelVelocity(){
+float Swerve_module_controls::getDriveBldcVel(){
     if(this->bldc_sendCmd("r "+(String)_motorNum+".controller.input_vel")!=SWERVE_OK) return 0;
     return this->parseWheelVar(pins.SerialOdr->readString());
 }
-#ifndef temp
-float Swerve_module_controls::getWheelTorque(){
-    if(this->bldc_sendCmd("r "+(String)_motorNum+".controller.input_torque")!=SWERVE_OK) return 0;
-    return this->parseWheelVar(pins.SerialOdr->readString());
-}
-#endif
-float Swerve_module_controls::getWheelEncoderVariables(){
-    
+float Swerve_module_controls::getDriveEncoderVariables(){
     pins.SerialOdr->print("r axis"+(String)_motorNum+".encoder.pos_estimate\n");
     return this->parseWheelVar(pins.SerialOdr->readString());
 } 
+bool Swerve_module_controls::checkStepSkiping(){
+    return (fabs(this->getTurnEncoderPos()/this->getTurnStepperPos())<0.005)?true: false;
+}
 float Swerve_module_controls::parseWheelVar(String s){
     s = pins.SerialOdr->readString();
     s.trim();
+    pins.SerialMonitor->println(s);
     return s.toFloat();
 }
-agvEr Swerve_module_controls::checkWheelEncoderInfos(){
+agvEr Swerve_module_controls::checkDriveEncoderInfos(){
     String cmd[3] = {"error", "encoder.config.phase_offset", "encoder.config.direction"};
     for(short i=0; i<3; i++){
         agvEr agver = this->bldc_sendCmd("r "+(String)_motorNum+"."+cmd[i]);
@@ -242,7 +209,11 @@ agvEr Swerve_module_controls::checkWheelEncoderInfos(){
     };
     return SWERVE_OK;
 }
-
+agvEr Swerve_module_controls::loadSettings(ctrlSettings settings){
+    this->settings = settings;
+    
+    return SWERVE_OK;
+}
 bool Swerve_module_controls::printPosStats(){ // set option for printing the right amount of data
     pins.SerialMonitor->print(
         "Stepper motor: " + (String)(pos2deg(stepper->getCurrentPosition(),MOTOR_MICROSTEPS)) + "\tdegrees\t\n" +

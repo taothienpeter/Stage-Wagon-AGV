@@ -1,6 +1,6 @@
 #include <math.h>
 // Ebedded System config
-#define MONITOR_BAUDRATE 9600
+#define MONITOR_BAUDRATE 115200
 #define ODRIVE_BAUDRATE 115200
 
 #define JITTER_PERCENTAGE 0.001
@@ -68,12 +68,21 @@
 #define ODRIVE_BAUD ODRIVE_BAUDRATE // 115200  
 
 #define ODRIVE_CONFIG
+
 // Controller config
+
+#define CONFIG_STEPPER_SPEED 20 // pulses in Us 
+#define CONFIG_STEPPER_ACCEL 10000
+#define CONFIG_STEPPER_UNIT Us
+#define CONFIG_BLDC_SPEED 10 // rev/s 
+#define CONFIG_BLDC_UNIT meter
+#define CONFIG_BLDC_ACCEL_MAX 2
+#define CONFIG_BLDC_ACCEL_MIN 1
 
 #define PROCESS_DELTA_T 0.05
 
-#define ESP_MOSI 23
-#define ESP_MISO 19
-#define ESP_SCLK 18
+// #define ESP_MOSI 23
+// #define ESP_MISO 19
+// #define ESP_SCLK 18
 // #define ESP_SS   5  // intercept with encoder
-#define SPICLK_SPEED 10000000
+// #define SPICLK_SPEED 10000000

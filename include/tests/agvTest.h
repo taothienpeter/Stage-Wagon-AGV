@@ -1,5 +1,6 @@
 #include "AgvFrame.h"
 #include "FrameEnum.h"
+FastAccelStepperEngine engine = FastAccelStepperEngine();
 SwervePin pins[2] = {{
     .stepDir = MOTOR_1_PIN_DIR,
     .stepPul = MOTOR_1_PIN_PUL,
@@ -12,6 +13,7 @@ SwervePin pins[2] = {{
 
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial,
+    .stepperEngine = &engine,
 }, {
     .stepDir = MOTOR_2_PIN_DIR,
     .stepPul = MOTOR_2_PIN_PUL,
@@ -24,60 +26,67 @@ SwervePin pins[2] = {{
 
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial,
-}};
+    .stepperEngine = &engine,
+}}; 
 wheelPositions wheelPos[2] = {
     wheelPositions(WHEEL_POSITIONS_W/2, WHEEL_POSITIONS_B/2),
     wheelPositions(-WHEEL_POSITIONS_W/2, -WHEEL_POSITIONS_B/2)
 };
 Swerve_module_kinematics *swerve[2] = {new Swerve_module_kinematics(pins[0], wheelPos[0], {0x00}), 
                                        new Swerve_module_kinematics(pins[1], wheelPos[1], {0x00})};
-// Swerve_module_controls *swerve[2] = {new Swerve_module_controls(pins[0]), new Swerve_module_controls(pins[1])};
-// ctrlValues ref = {0.0,0.0,0.0,0.0}; // only use posTurn and velDrive
-
+pose Pose = {0, 0, 0};
+vel Vel = {0, 0, 0};
 void setup(){
-    // Initialize Serial first
-    Serial.begin(MONITOR_BAUDRATE);
-    delay(500);
-    
-    // Initialize encoders sequentially with delays to avoid PCNT ISR conflicts
+    // _initswerve();
     swerve[0]->initSwerveModule();
     swerve[1]->initSwerveModule();
-    // delay(100);
-    delay(100);
 }
-void loop(){
+void loop(){    
+    
     if (Serial.available()) {
       String data = Serial.readStringUntil('\n');
-      // data.trim();
+      data.trim();
       int inter = data.substring(1).toInt();
       Serial.println("Received from laptop: "+data);
       
         switch(data[0]){
-            case 'n':
-                ref.position = 1;
-                ref.angle = 0;
-                break;
-            case 'w':
-                ref.position = 1;
-                ref.angle = -90;
+            case 'd':
+                Vel = {0, -1};
                 break;
             case 's':
-                ref.position = -1;
-                ref.angle = 0;
+                Vel = {-1, 0};
+                break;
+            case 'a':
+                Vel = {0, 1};
+                break;
+            case 'w':
+                Vel = {1, 0};
+                break;
+            case 'q':
+                Vel = {1, 1};
                 break;
             case 'e':
-                ref.position = 1;
-                ref.angle = 90;
+                Vel = {1, -1};
+                break;
+            case 'z':
+                Vel = {-1, 1};
+                break;
+            case 'c':
+                Vel = {-1, -1};
                 break;
             case 'r':
-                ref.position = 0;
-                ref.angle = 0;
-                swerve[0]->resetVars();
-                swerve[0]->resetVars();
+                Vel = {0, 0, 90};
+                break;
+            default:
+                Serial.println("Invalid command");
+                break;
         }
-        for (short i=0; i<2; i++){
-            swerve[i]->driveSwerve(&ref);
+        
+    
+        for (short i=1; i<2; i++){
+            swerve[i]->driveSwerveVel(Vel);
         }
     }
-    delay(5); // delta t
+    // Serial.println("Pose: "+ (String)Pose.x + " " + (String)Pose.y + " " + (String)Pose.theta);
+    delay(5); // delta t = 0.005s
 }

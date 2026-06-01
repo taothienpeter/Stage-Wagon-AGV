@@ -13,8 +13,9 @@ enum agvEr{
     AGV_INFO_CLAMP,
     AGV_INFO_COMPUTE_WHEELSTATE,
     AGV_INFO_COMPUTE_FRAMEVELO,
-    AGV_INFO_DRIVE_FRAMEVELO,
+    // AGV_INFO_DRIVE_FRAMEVELO,
     AGV_INFO_DONE_HOMING,   
+    AGV_INFO_DRIVE_OK,
 //     AGV_INFO_DONE_RESET,
 
 //     SWERVE_WARNING,
@@ -28,13 +29,21 @@ enum agvEr{
     SWERVE_ERROR_FEEDBACK_OK, // from error checker function, should be output in printStatus()
     SWERVE_OK
 };
-union isClockWise{
-    struct {
-        bool isEnc_StepCW:1; 
-        bool isEnc_BldcCW:1; 
-        bool isStepCW:1; 
-        bool isOdrCW:1;
-    };
+struct logEr{
+    // 4 states logs
+    agvEr swerveErr[4];
+    agvEr swerveInfo[4];
+    agvEr swerveWarning[4];
+    // 2 states logs
+    agvEr agvErr[2];
+    agvEr agvInfo[2];
+    agvEr agvWarning[2];
+};
+struct isClockWise{
+    bool isEnc_StepCW:1; 
+    bool isEnc_BldcCW:1; 
+    bool isStepCW:1; 
+    bool isOdrCW:1;
 };
 struct SwervePin {
     uint8_t stepDir;
@@ -53,6 +62,15 @@ struct SwervePin {
     FastAccelStepperEngine* stepperEngine;
     // isClockWise isCW;
 };
+
+enum calibState{ 
+    stepCW,
+    stepCCW,
+    stepTruehome,
+    bldcMotor,
+    bldcEncoder,
+    bldcArmed,
+};
 enum unit{
     degree,
     radian,
@@ -62,13 +80,19 @@ enum unit{
     Us,
     Hz
 };
-enum calibState{ 
-    stepCW,
-    stepCCW,
-    stepTruehome,
-    bldcMotor,
-    bldcEncoder,
-    bldcArmed,
+struct ctrlSettings{
+    // uint8_t bldcAccel;
+    unit unitTurn;
+    unit unitDrive;
+    
+    uint8_t stepperSpeed; // best in Us or Hz (tick, Us, Hz)
+    uint16_t stepperAccel; 
+
+    uint8_t bldcSpeed; // best in m/s (original is revolutions/s)
+    uint8_t bldcAccelMax;
+    uint8_t bldcAccelMin;
+
+    isClockWise isCW;
 };
 struct wheelPositions { 
     float posW;
@@ -80,8 +104,8 @@ struct wheelPositions {
     float getTheta() const { return atan2(posB, posW); }
 };
 struct wheelState{
-    double speed;
     double angle;
+    double speed;
 };
 struct pose{
     double x, y , theta;

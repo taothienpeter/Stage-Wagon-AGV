@@ -1,5 +1,6 @@
 #include "AgvFrame.h"
 #include "FrameEnum.h"
+FastAccelStepperEngine engine = FastAccelStepperEngine();
 SwervePin pins[2] = {{
     .stepDir = MOTOR_1_PIN_DIR,
     .stepPul = MOTOR_1_PIN_PUL,
@@ -12,6 +13,7 @@ SwervePin pins[2] = {{
 
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial1,
+    .stepperEngine = &engine,
 }, {
     .stepDir = MOTOR_2_PIN_DIR,
     .stepPul = MOTOR_2_PIN_PUL,
@@ -24,25 +26,14 @@ SwervePin pins[2] = {{
 
     .SerialOdr = &Serial2,
     .SerialMonitor = &Serial,
+    .stepperEngine = &engine,
 }};
-// wheelPositions wheelPos[2] = {
-//     wheelPositions(WHEEL_POSITIONS_W/2, WHEEL_POSITIONS_B/2),
-//     wheelPositions(-WHEEL_POSITIONS_W/2, -WHEEL_POSITIONS_B/2)
-// };
-// Swerve_module_kinematics *swerve[2] = {new Swerve_module_kinematics(pins[0], {0x00}, wheelPos[0]), 
-//                                        new Swerve_module_kinematics(pins[1], {0x00}, wheelPos[1])};
-Swerve_module_controls *swerve[2] = {new Swerve_module_controls(pins[0]), new Swerve_module_controls(pins[1])};
-// ctrlValues ref = {0.0, 0.0, 0.0, 0.0}; // only use posTurn and velDrive
+Swerve_module_controls *swerve = new Swerve_module_controls(pins[1]);
 
 void setup(){
     // Initialize Serial first
     Serial.begin(MONITOR_BAUDRATE);
-    // delay(500);
-    
-    // Initialize encoders sequentially with delays to avoid PCNT ISR conflicts
-    swerve[0]->initSwerve();
-    // delay(100);
-    swerve[1]->initSwerve();
+    swerve->initSwerve();
     delay(100);
 }
 void loop(){
@@ -54,16 +45,16 @@ void loop(){
       
         switch(data[0]){
             case 't':
-                swerve[0]->runTurnAngle(90);
+                swerve->runTurnAngle(inter);
                 break;
             case 'd':
-                swerve[0]->runDriveDistance(1);
+                swerve->runDriveDistance(inter);
                 break;
             case 'e':
-                swerve[0]->getWheelPosition();
+                swerve->getDriveBldcPos();
                 break;
             case 'r':
-                swerve[0]->resetVars();
+                swerve->resetVars();
                 break;
             case 'h':
                 // swerve[0]->home();

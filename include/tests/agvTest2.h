@@ -35,44 +35,25 @@ wheelPositions wheelPos[2] = {
 Swerve_module_kinematics *swerve[2] = {new Swerve_module_kinematics(pins[0], wheelPos[0], {0x00}), 
                                        new Swerve_module_kinematics(pins[1], wheelPos[1], {0x00})};
 pose Pose = {0, 0, 0};
+vel Vel = {0, 0, 0};
 void setup(){
-    _initswerve();
-    // Serial.println("Stalling...");
-    // while(1);
+    // _initswerve();
+    swerve[0]->initSwerveModule();
+    swerve[1]->initSwerveModule();
 }
 void loop(){    
     
     if (Serial.available()) {
       String data = Serial.readStringUntil('\n');
       data.trim();
-      int inter = data.substring(1).toInt();
-      Serial.println("Received from laptop: "+data);
-      
-        switch(data[0]){
-            case 'd':
-                Pose = {1, 0};
-                break;
-            case 's':
-                Pose = {0, -1};
-                break;
-            case 'a':
-                Pose = {-1, 0};
-                break;
-            case 'w':
-                Pose = {0, 1};
-                break;
-            case 'r':
-                Pose = {0, 0, 90};
-                break;
-            default:
-                Serial.println("Invalid command");
-                break;
+    //   Serial.println(data);
+        _cmdParse(data);
+        // Serial.println("Receive data:"+(String)Vel.velx + "\t" + (String)Vel.vely + "\t" + (String)Vel.omega);
+        for (short i=0; i<2; i++){
+            swerve[i]->driveSwerveVel(Vel);
         }
-        
     }
-    // for (short i=0; i<2; i++){
-    //         swerve[i]->driveSwervePose(Pose);
-    // }
-    Serial.println("Pose: "+ (String)Pose.x + " " + (String)Pose.y + " " + (String)Pose.theta);
-    delay(5); // delta t = 0.005s
+    _logData();
+    // Serial.println("Pose: "+ (String)Pose.x + " " + (String)Pose.y + " " + (String)Pose.theta);
+    delay(50); // delta t = 0.005s
 }

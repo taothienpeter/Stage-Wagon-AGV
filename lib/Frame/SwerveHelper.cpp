@@ -2,9 +2,8 @@
 #include "FrameEnum.h"
 
 extern Swerve_module_kinematics* swerve[2];
+extern vel Vel;
 agvEr _initswerve(){
-    // initSwerveModule();
-    swerve[0]->initSwerveModule();
     // calib swerve
     Serial.println("Homing sequence started");
     u_int16_t sT = millis(); // start time
@@ -32,117 +31,82 @@ agvEr _initswerve(){
             else if((millis() - sT)>5000){eT = 15000;}
         }
     }    
+    Serial.println(swerve[0]->swerveCtrl->getTurnStepperPos());
     return SWERVE_OK;
 };
-// agvEr home(SwervePin pins){
-//     // if (homingSeq(pins, engine) == SWERVE_ERROR_NO_HOME_DETECTED) pins.SerialMonitor->println("Dir motor no home pins, next for BLDC");
-//     // if (engineInitialized) {
-//     // reset bldc parrameters
-//     pins.SerialMonitor->println("Calibrating MOTOR ...");
-//     pins.SerialOdr->print("w axis0.requested_state 4\n");
-//     pins.SerialOdr->print("w axis1.requested_state 4\n");
-//     pins.SerialOdr->print("r axis0.error\n");
-//     // State = ARM;
-//     delay(5000);
-//     pins.SerialMonitor->println("Calibrating ENCODER ...");
-//     pins.SerialOdr->print("w axis0.requested_state 7\n");
-//     pins.SerialOdr->print("w axis1.requested_state 7\n");
-//     pins.SerialOdr->print("r axis0.error\n");
-//     // State = READY;
-//     delay(10000);
-//     pins.SerialOdr->print("w axis0.controller.input_pos 0\n"); // Zero position target
-//     pins.SerialOdr->print("w axis1.controller.input_pos 0\n");
-//     pins.SerialOdr->print("w axis0.requested_state 8\n"); // Arm
-//     pins.SerialOdr->print("w axis1.requested_state 8\n");
-//     pins.SerialMonitor->println("ARMED! Motor is holding.");
-//     pins.SerialOdr->print("r axis0.error\n");
-//     // }
-//     return SWERVE_INFO_HOME;
-// };
 
-// agvEr homingSeq(SwervePin pins, FastAccelStepper* stepper){ 
-//     return SWERVE_INFO_HOME;
-// }
+short _cmdParse(String cmd) { 
+  // 1. CRITICAL FIX: Trim whitespace/newlines before evaluating lengths or copying
+//   cmd.trim(); 
+  
+  if (cmd.length() == 0) return -1; 
+  
+  // Convert Arduino String to a char array buffer for tokenization
+  char buf[cmd.length() + 1]; 
+  cmd.toCharArray(buf, sizeof(buf));
+  
+  // Extract the first token (The Command Name)
+  char* token = strtok(buf, " "); 
+  if (token == NULL) return -1;
+  
+  String cmdType = String(token);
+  cmdType.toUpperCase(); 
 
-// agvEr Swerve_module_controls::stepperRoughHomeSeq(){
-//     pins.SerialMonitor->println("Homing sequence started");
-//     stepper->forceStopAndNewPosition(0);
-//     stepper->moveTo(deg2pos(180,MOTOR_MICROSTEPS));
-//     // delay(4000);
-//     stepper->moveTo(deg2pos(-180,MOTOR_MICROSTEPS));
-//     // delay(4000);
-//     if(!digitalRead(pins.encHome)) return SWERVE_ERROR_NO_HOME_DETECTED;
-//     return SWERVE_INFO_HOME;
-// }
-// agvEr Swerve_module_controls::stepperTrueHomeSeq(){
-//     enum HomingState {
-//         START_SEEK,
-//         FINDING_EDGE_A, // Looking for Switch ON
-//         FINDING_EDGE_B, // Looking for Switch OFF
-//         MOVING_TO_CENTER,
-//         HOMING_COMPLETE
-//     };
+  // --- EXTENSION SECTION ---
+  
+  // 1. Motion Command ("M velx vely omega")
+  if (cmdType == "M") {
+    token = strtok(NULL, " "); // Move to velx
+    if (token != NULL) Vel.velx = atof(token); 
+    
+    token = strtok(NULL, " "); // Move to vely
+    if (token != NULL) Vel.vely = atof(token);
+    
+    token = strtok(NULL, " "); // Move to omega
+    if (token != NULL) Vel.omega = atof(token);
+    
+    return 0; // Return success/unique ID for this command
+  }
+  
+  return -1; // Unknown command
+/*
+  // 2. Teleoperated Mode Command
+  else if (cmdType == "TELEOPERATED") {
+    Serial.println("Switching to Teleoperated Mode...");
+    // Add your execution logic here
+    return 1;
+  }
+  
+  // 3. Autonomous Mode Command
+  else if (cmdType == "AUTONOMOUS") {
+    Serial.println("Switching to Autonomous Mode...");
+    // Add your execution logic here
+    return 2;
+  }
+  
+  // 4. Practice Mode Command
+  else if (cmdType == "PRACTISE" || cmdType == "PRACTICE") {
+    Serial.println("Switching to Practice Mode...");
+    return 3;
+  }
+  
+  // 5. Test Mode Command
+  else if (cmdType == "TEST") {
+    Serial.println("Running Diagnostics/Test Mode...");
+    return 4;
+  }
 
-//     // State variables for each module
-//     HomingState stateM1 = START_SEEK;
-
-//     // Edge storage
-//     long edgeA1, edgeB1;
-//     bool homingActive = true; 
-
-//     if (!homingActive) return SWERVE_ERROR_NO_HOME_DETECTED;
-
-//     // --- MODULE 1 STATE MACHINE ---
-//     switch (stateM1) {
-//         case START_SEEK:
-//         stepper->setSpeedInHz(2000);
-//         stepper->runForward();
-//         stateM1 = FINDING_EDGE_A;
-//         break;
-
-//         case FINDING_EDGE_A:
-//             if (digitalRead(ENC_STEPPER_1HOME) == LOW) {
-//                 edgeA1 = Step_enc->getTicks();
-//                 stateM1 = FINDING_EDGE_B;
-//                 Serial.println("M1: Edge A Found");
-//             }
-//             break;
-
-//         case FINDING_EDGE_B:
-//             if (digitalRead(ENC_STEPPER_1HOME) == HIGH) {
-//                 edgeB1 = Step_enc->getTicks();
-//                 stepper->stopMove();
-//                 stateM1 = MOVING_TO_CENTER;
-//                 Serial.println("M1: Edge B Found");
-//             }
-//             break;
-
-//         case MOVING_TO_CENTER:
-//             if (!stepper->isRunning()) {
-//                 long center = (edgeA1 + edgeB1) / 2;
-//                 stepper->setCurrentPosition(Step_enc->getTicks());
-//                 stepper->setSpeedInHz(1000);
-//                 stepper->moveTo(center);
-//                 stateM1 = HOMING_COMPLETE;
-//             }
-//             break;
-
-//         case HOMING_COMPLETE:
-//             if (!stepper->isRunning()) {
-//                 // Final Zeroing
-//                 // Step_enc->();
-//                 stepper->setCurrentPosition(0);
-//                 stepper->setSpeedInUs(50);
-//                 Serial.println("M1: Homing Finished");
-//             }
-//             break;
-//     };
-//     // Check if overall homing is finished
-//     // if (stateM1 == HOMING_COMPLETE && stateM2 == HOMING_COMPLETE && 
-//     //     !stepper1->isRunning() && !stepper2->isRunning()) {
-//     //     homingActive = false;
-//     //     Serial.println("ALL SYSTEMS ZEROED AND READY");
-//     // }
-//     // }
-//     return SWERVE_INFO_HOME;
-// }
+  // If no commands match
+  Serial.print("Unknown command received: ");
+  Serial.println(cmdType);
+    return -1;
+*/
+}
+short _logData(){
+    // Example transmission output structure for your loop:
+    Serial.println("W " + (String)degrees(swerve[0]->wS.angle) +" "+ (String)swerve[0]->wS.speed+
+                    " " + (String)degrees(swerve[1]->wS.angle)+ " "+  (String)swerve[1]->wS.speed);
+    // Serial.println("R " + (String)swerve[0]->swerveCtrl->getTurnEncoderPos() +" "+ (String)swerve[0]->swerveCtrl->getDriveBldcVel()+
+    //                 " " + (String)swerve[1]->swerveCtrl->getTurnEncoderPos()+ " "+  (String)swerve[1]->swerveCtrl->getDriveBldcVel());
+    return -1;
+}
